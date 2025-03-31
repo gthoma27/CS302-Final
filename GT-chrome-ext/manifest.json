@@ -1,0 +1,11 @@
+{
+    "name": "Upcoming knoxville concerts",
+    "version": "1.0.0",
+    "description": "This is an extension to look up concerts in knoxville",
+    "manifest_version": 3,
+    "author": "Grant T",
+    "action": {
+        "default_popup": "index.html",
+        "default_title": "upcoming knox concerts"
+    }
+}
