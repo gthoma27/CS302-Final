@@ -1,0 +1,11 @@
+{
+    "name": "Exerra phishing check",
+    "version": "1.0.0",
+    "description": "This is an extension to query the exerra database for a link",
+    "manifest_version": 3,
+    "author": "Grant T",
+    "action": {
+        "default_popup": "index.html",
+        "default_title": "phishing detections"
+    }
+}
