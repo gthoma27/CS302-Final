@@ -4,7 +4,19 @@ Time Log
 Date       Time       Doing What
 3/13       1          PRD Creation and Idea Brainstorming
 3/15       1          Researched Possible routes, languages, and environments necessary
-3/29       2          Did heavy learning and practice with API's playing around with them in localhosts websites as well as chrome extensions and learning javascript and html basics
-3/31       3          Developed two chrome extensions, one is "code along" with the youtube video attached, other is a VERY LIMITED ext. using a public phishing detection API. 
+3/29       2          Did heavy learning and practice with API's playing around with them in localhosts websites as well as chrome extensions and learning javascript                        and html basics
+3/31       3          Developed two chrome extensions, one is "code along" with the youtube video attached, other is a VERY LIMITED ext. using a public phishing                             detection API. 
                       Also working on another extension using the google safe browsing api, will tak more work still.
+
+My contributions: node_modules, both GT extension folders.
+
+RUBRIC:
+Executable:           Runs without error (5), Runs with trouble shooting (3), Does not run (0)
+Works as Intended:    Dedicated Tasks are performed flawlessly (10), 8, 6, 4, 2, Did not perform desired task (0)
+Code is well-formatted and engaging: Yes (5), no (0)
+New topics are explored and understood: Yes (5), Kinda (3), No (0)
+Algorithm/Concept from 302 is used and applied correctly: Yes and needed (5), Yes but is unneccessary (3), No (0)
+Sufficient Effort went into the project and is apparent: Yes (10), 8, 6, 4, 2, 0
+Cool Factor, is this project unique and/or something I would use: Absolutely (5), 3, 1, no (0)
+
 
