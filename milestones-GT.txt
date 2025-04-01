@@ -1,0 +1,10 @@
+Grant Thomas - Challenge 7 Submission
+
+Time Log
+Date       Time       Doing What
+3/13       1          PRD Creation and Idea Brainstorming
+3/15       1          Researched Possible routes, languages, and environments necessary
+3/29       2          Did heavy learning and practice with API's playing around with them in localhosts websites as well as chrome extensions and learning javascript and html basics
+3/31       3          Developed two chrome extensions, one is "code along" with the youtube video attached, other is a VERY LIMITED ext. using a public phishing detection API. 
+                      Also working on another extension using the google safe browsing api, will tak more work still.
+
