@@ -1,0 +1,17 @@
+TimeLog
+
+- 3/20/25 - 2 hours
+    Learned about chrome extensions and the Format of them
+- 3/27/25 - 2 hours
+    Did more research and created a very basic extension as practice (Listed in Sam Branch/Cs_Test)
+- 3/29/25 - 1 hour
+    Did a quick look into Random Forest Classifiers from my Machine learning class, Still havent decided If its necessary on project
+
+Rubric
+
+Learning/Research - 10 pts - Learn more about java and chrome extensions. Learn necessary API's in order to code
+
+Java Programming  - 20 pts - Program assigned section of extension in java or other required Language.
+
+Interface         - 10 pts - Create a visual interface using html in the chrome extension code
+
