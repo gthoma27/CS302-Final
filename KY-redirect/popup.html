@@ -1,14 +1,18 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Redirect</title>
+    <title>Site Tools</title>
     <style>
-      body { font-family: sans-serif; padding: 10px; }
-      button { padding: 10px 20px; }
+      body { font-family: sans-serif; padding: 10px; width: 220px; }
+      button { padding: 8px 12px; margin-bottom: 10px; width: 100%; }
+      #result { margin-top: 10px; font-size: 14px; color: #333; }
     </style>
   </head>
   <body>
     <button id="redirectBtn">Go to Example.com</button>
+    <button id="checkPhishingBtn">Check for Phishing</button>
+    <div id="result">🔍 Waiting for action...</div>
+
     <script src="popup.js"></script>
   </body>
 </html>
