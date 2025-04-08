@@ -30,14 +30,14 @@ document.getElementById("checkPhishingBtn").addEventListener("click", () => {
     .then(data => {
       const result = document.getElementById("result");
       if (data && data.matches && data.matches.length > 0) {
-        result.textContent = "🚨 Unsafe: This site is flagged!";
+        result.textContent = "Unsafe: This site is flagged!";
       } else {
-        result.textContent = "✅ Safe: No threats detected.";
+        result.textContent = "Safe: No threats detected.";
       }
     })
     .catch(error => {
       console.error("Error checking site:", error);
-      document.getElementById("result").textContent = "⚠️ Error checking site.";
+      document.getElementById("result").textContent = "Error checking site.";
     });
   });
 });
