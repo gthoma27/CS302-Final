@@ -10,7 +10,7 @@ document.getElementById("checkPhishingBtn").addEventListener("click", () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const url = tabs[0].url;
 
-    fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`, {
+    fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${AIzaSyBxE_YdQP1S0H-LkS0QEt83SXBwyOahdqA}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
