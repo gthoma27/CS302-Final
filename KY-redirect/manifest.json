@@ -1,12 +1,11 @@
 {
     "manifest_version": 3,
-    "name": "Redirect Extension",
+    "name": "Redirect Button",
     "version": "1.0",
     "action": {
-        "default_title": "Click to redirect"
-    },
-    "background": {
-      "service_worker": "background.js"
+      "default_popup": "popup.html",
+      "default_title": "Click the button"
     },
     "permissions": ["tabs"]
   }
+  
