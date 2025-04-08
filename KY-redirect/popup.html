@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <title>Site Tools</title>
-    <style>
-      body { font-family: sans-serif; padding: 10px; width: 220px; }
-      button { padding: 8px 12px; margin-bottom: 10px; width: 100%; }
-      #result { margin-top: 10px; font-size: 14px; color: #333; }
-    </style>
-  </head>
-  <body>
-    <button id="redirectBtn">Go to Example.com</button>
-    <button id="checkPhishingBtn">Check for Phishing</button>
-    <div id="result">Waiting for action...</div>
+<head>
+  <title>Phishing Detector</title>
+  <style>
+    body { font-family: sans-serif; padding: 10px; width: 250px; }
+    #score { font-size: 1.5em; font-weight: bold; }
+    .danger { color: red; }
+    .safe { color: green; }
+  </style>
+</head>
+<body>
+  <h3>Phishing Check</h3>
+  <div><strong>Domain:</strong> <span id="domain">Loading...</span></div>
+  <div><strong>CVSS Score:</strong> <span id="score">-</span></div>
+  <div id="status"></div>
 
-    <script src="popup.js"></script>
-  </body>
+  <script src="popup.js"></script>
+</body>
 </html>

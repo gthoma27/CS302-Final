@@ -1,43 +1,47 @@
-const API_KEY = "AIzaSyBxE_YdQP1S0H-LkS0QEt83SXBwyOahdqA";  // Replace with your key
-
-document.getElementById("redirectBtn").addEventListener("click", () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    chrome.tabs.update(tabs[0].id, { url: "https://example.com" });
-  });
-});
-
-document.getElementById("checkPhishingBtn").addEventListener("click", () => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const url = tabs[0].url;
-
-    fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${AIzaSyBxE_YdQP1S0H-LkS0QEt83SXBwyOahdqA}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client: {
-          clientId: "yourcompanyname",
-          clientVersion: "1.5.2"
-        },
-        threatInfo: {
-          threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
-          platformTypes: ["ANY_PLATFORM"],
-          threatEntryTypes: ["URL"],
-          threatEntries: [{ url: url }]
-        }
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      const result = document.getElementById("result");
-      if (data && data.matches && data.matches.length > 0) {
-        result.textContent = "Unsafe: This site is flagged!";
-      } else {
-        result.textContent = "Safe: No threats detected.";
+async function getNVDScore(domain) {
+  const keyword = domain.split('.').slice(0, -1).join('.');
+  try {
+    const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`, {
+      headers: {
+        "apiKey": "YOUR_NVD_API_KEY_HERE"
       }
-    })
-    .catch(error => {
-      console.error("Error checking site:", error);
-      document.getElementById("result").textContent = "Error checking site.";
     });
-  });
+
+    const data = await response.json();
+    if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
+
+    const scores = data.vulnerabilities
+      .map(v => v.cvssMetricV31?.[0]?.cvssData?.baseScore || 0)
+      .filter(score => score > 0)
+      .slice(0, 3);
+
+    if (scores.length === 0) return 0;
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
+  } catch (err) {
+    console.error("NVD fetch error:", err);
+    return 0;
+  }
+}
+
+chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+  const tab = tabs[0];
+  const url = new URL(tab.url);
+  const domain = url.hostname;
+
+  document.getElementById("domain").textContent = domain;
+
+  const cvssScore = await getNVDScore(domain);
+  const scaled = Math.min(cvssScore * 2, 20);
+  const scoreElem = document.getElementById("score");
+
+  scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
+
+  const statusElem = document.getElementById("status");
+  if (scaled >= 15) {
+    scoreElem.className = "danger";
+    statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
+  } else {
+    scoreElem.className = "safe";
+    statusElem.textContent = "✅ No major known vulnerabilities.";
+  }
 });
