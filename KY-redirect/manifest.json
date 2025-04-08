@@ -1,12 +1,17 @@
 {
-    "manifest_version": 3,
-    "name": "Phishing Checker",
-    "version": "1.1",
-    "action": {
-      "default_popup": "popup.html",
-      "default_title": "Check Website"
-    },
-    "permissions": ["tabs"],
-    "host_permissions": ["https://safebrowsing.googleapis.com/"]
+  "manifest_version": 3,
+  "name": "Phishing Detector",
+  "version": "1.0",
+  "permissions": ["scripting"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.png"
   }
-  
+}
