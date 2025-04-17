@@ -15,6 +15,6 @@
   "action": {
     "default_title": "Phishing Detector",
     "default_popup": "popup.html",
-  "default_icon": "icons/icon.png"
+  "default_icon": "icon.png"
   }
 }
