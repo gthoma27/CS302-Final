@@ -31,6 +31,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       });
   
       const data = await response.json();
+      console.log("API response: ", data)
       if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
   
       const scores = data.vulnerabilities
