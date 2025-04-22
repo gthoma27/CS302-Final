@@ -1,7 +1,7 @@
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === "complete" && tab.url && tab.active) {
       const domain = new URL(tab.url).hostname;
-      const keywords = domain.split('.').slice(0, -1).join('.');
+      const keywords = domain;
   
       checkNVDScore(keywords).then(cvssScore => {
         const scaledScore = Math.min(cvssScore * 2, 20); // Scale 0–10 to 0–20
