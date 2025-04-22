@@ -2,13 +2,20 @@
   "manifest_version": 3,
   "name" : "My chrome extension",
   "version": "0.1.0",
-  "decsription": "My first extension",
+  "description": "My first extension",
   "action": {
     "default_popup": "popup.html"
   },
   "permissions": [
-    "storage"
+    "storage", "scripting", "activeTab"
 
+    ],
+    "content_scripts":[
+      {
+        "matches" : ["<all_urls>"],
+        "js" : ["content.js"],
+        "run_at": "document_idle"
+      }
     ]
   }
     
