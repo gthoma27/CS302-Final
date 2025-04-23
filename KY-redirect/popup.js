@@ -11,7 +11,7 @@ async function getNVDScore(domain) {
     if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
 
     const scores = data.vulnerabilities
-      .map(v => v.cvssMetricV31?.[0]?.cvssData?.baseScore || 0)
+      .map(v => v.cvssMetricV2?.[0]?.cvssData?.baseScore || 0)
       .filter(score => score > 0)
       .slice(0, 3);
 
