@@ -13,8 +13,11 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Phishing Detector",
-    "default_popup": "popup.html",
+  "default_popup": "popup.html",
   "default_icon": "icon.png"
-  }
+},
+"browser_action": {
+  "default_popup": "popup.html",
+  "default_icon": "icon.png"
+}
 }
