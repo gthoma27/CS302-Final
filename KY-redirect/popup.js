@@ -11,7 +11,14 @@ async function getNVDScore(domain) {
     if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
 
     const scores = data.vulnerabilities
-      .map(v => v.cvssMetricV2?.[0]?.cvssData?.baseScore || 0)
+      .map(vuln => {
+        const metrics = vuln.cve.metrics || {};
+
+        const v3 = metrics.cvssMetricV31?.[0]?.cvssData?.baseScore;
+        const v2 = metrics.cvssMetricV2?.[0]?.cvssData?.baseScore;
+
+        return v3 ?? v2 ?? 0; // Prefer v3.1 > fallback to v2 > else 0
+      })
       .filter(score => score > 0)
       .slice(0, 3);
 
@@ -22,6 +29,7 @@ async function getNVDScore(domain) {
     return 0;
   }
 }
+
 
 chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   const tab = tabs[0];
