@@ -45,13 +45,13 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
   const statusElem = document.getElementById("status");
-  if(cvssScore == -1){
-    statusElem.textContent = "No information on this website"
-  }
   if (scaled >= 15) {
     scoreElem.className = "danger";
     statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
-  } else {
+  } else if(cvssScore == -1){
+    scoreElem.className = "danger";
+    statusElem.textContent = "Website Unknown - Use caution!" 
+  }else {
     scoreElem.className = "safe";
     statusElem.textContent = "✅ No major known vulnerabilities.";
   }
