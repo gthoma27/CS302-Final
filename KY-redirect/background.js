@@ -21,6 +21,11 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       });
     }
   });
+
+  chrome.identity.getProfileUserInfo(function(userInfo) {
+    currUser_email = userInfo.email;
+    currUser_ID = userInfo.id;
+  });
   
   async function checkNVDScore(keyword) {
     try {

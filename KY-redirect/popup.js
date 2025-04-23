@@ -1,3 +1,6 @@
+let sorted = [];
+
+
 async function getNVDScore(domain) {
   const keyword = domain.split('.').slice(0, -1).join('.');
   try {
@@ -30,6 +33,57 @@ async function getNVDScore(domain) {
   }
 }
 
+function roundToTenths(number) {
+  return Math.round(number * 10) / 10;
+}
+
+function saveScanResult(domain, score) {
+  chrome.storage.local.get(['scanHistory'], (res) => {
+    const history = res.scanHistory || [];
+
+    const updatedHistory = history.filter(entry => entry.domain !== domain);
+    updatedHistory.push({
+      domain,
+      score,
+      scannedAt: Date.now()
+    });
+
+    chrome.storage.local.set({ scanHistory: updatedHistory }, () => {
+      if (chrome.runtime.lastError) {
+        console.error("Error saving scan history:", chrome.runtime.lastError);
+      } else {
+        console.log(`Scan saved for ${domain}`);
+      }
+    });
+  });
+}
+
+function loadScanHistory() {
+  chrome.storage.local.get(['scanHistory'], (res) => {
+    console.log("Retrieved scan history:", res.scanHistory);
+    const history = res.scanHistory || [];
+    const container = document.getElementById('history');
+    container.innerHTML = ''; // Clear old entries
+
+    // Sort by score in descending order
+    history
+      .sort((a, b) => b.score - a.score) // Sort by score (highest to lowest)
+      .forEach(entry => {
+        const div = document.createElement('div');
+        div.textContent = `${entry.domain} – Score: ${roundToTenths(entry.score)}`;
+        container.appendChild(div);
+      });
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  loadScanHistory();
+
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    clearScanHistory();
+    loadScanHistory();
+  });
+});
 
 chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   const tab = tabs[0];
@@ -48,11 +102,17 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   if (scaled >= 15) {
     scoreElem.className = "danger";
     statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
-  } else if(cvssScore == -1){
+  } else if (cvssScore == -1) {
     scoreElem.className = "danger";
-    statusElem.textContent = "Website Unknown - Use caution!" 
-  }else {
+    statusElem.textContent = "Website Unknown - Use caution!";
+  } else {
     scoreElem.className = "safe";
     statusElem.textContent = "✅ No major known vulnerabilities.";
   }
+
+  // Save the scan result automatically
+  saveScanResult(domain, cvssScore);
+
+  // Reload the scan history to include the new scan
+  loadScanHistory();
 });

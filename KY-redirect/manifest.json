@@ -4,7 +4,10 @@
   "version": "1.0",
   "permissions": [
     "tabs",
-    "scripting"
+    "scripting",
+    "storage",
+    "identity",
+    "identity.email"
   ],
   "host_permissions": [
     "https://services.nvd.nist.gov/*"
