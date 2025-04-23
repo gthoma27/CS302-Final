@@ -8,7 +8,7 @@ async function getNVDScore(domain) {
     });
 
     const data = await response.json();
-    if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
+    if (!data.vulnerabilities || data.vulnerabilities.length === 0) return -1;
 
     const scores = data.vulnerabilities
       .map(vuln => {
@@ -45,6 +45,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
   const statusElem = document.getElementById("status");
+  if(cvssScore == -1){
+    statusElem.textContent = "No information on this website"
+  }
   if (scaled >= 15) {
     scoreElem.className = "danger";
     statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
