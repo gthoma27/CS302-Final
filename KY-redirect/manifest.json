@@ -11,6 +11,8 @@
   ],
   "host_permissions": [
     "https://services.nvd.nist.gov/*"
+    "https://api.openai.com/*"
+    // calls the CHAT API...
   ],
   "background": {
     "service_worker": "background.js"

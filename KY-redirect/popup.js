@@ -1,6 +1,7 @@
 let sorted = [];
 
 // ----------------- NVD API: Get vulnerability score -----------------
+//
 async function getNVDScore(domain) {
   const keyword = domain.split('.').slice(0, -1).join('.');
   try {
