@@ -1,7 +1,15 @@
+function getBaseDomain(hostname) {
+  const parts = hostname.split('.');
+  if (parts.length >= 2) {
+    return parts.slice(-2).join('.');
+  }
+  return hostname;
+}
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo.status === "complete" && tab.url && tab.active) {
       const domain = new URL(tab.url).hostname;
-      const keywords = domain;
+      const keywords = getBaseDomain(domain);
   
       checkNVDScore(keywords).then(cvssScore => {
         const scaledScore = Math.min(cvssScore * 2, 20); // Scale 0–10 to 0–20

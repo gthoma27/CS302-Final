@@ -10,15 +10,14 @@
     "identity.email"
   ],
   "host_permissions": [
-    "https://services.nvd.nist.gov/*"
+    "https://services.nvd.nist.gov/*",
     "https://api.openai.com/*"
-
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-  "default_popup": "popup.html",
-  "default_icon": "icon.png"
-}
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+  }
 }

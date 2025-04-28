@@ -1,9 +1,18 @@
 let sorted = [];
 
+// Helper to extract base domain (same as background.js)
+function getBaseDomain(hostname) {
+  const parts = hostname.split('.');
+  if (parts.length >= 2) {
+    return parts.slice(-2).join('.');
+  }
+  return hostname;
+}
+
 // ----------------- NVD API: Get vulnerability score -----------------
 //
 async function getNVDScore(domain) {
-  const keyword = domain.split('.').slice(0, -1).join('.');
+  const keyword = getBaseDomain(domain);
   try {
     const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`, {
       headers: {
@@ -12,7 +21,7 @@ async function getNVDScore(domain) {
     });
 
     const data = await response.json();
-    if (!data.vulnerabilities || data.vulnerabilities.length === 0) return -1;
+    if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
 
     const scores = data.vulnerabilities
       .map(vuln => {
@@ -92,25 +101,42 @@ function saveScanResult(domain, score) {
   });
 }
 
-function loadScanHistory() {
+function loadScanHistory(order = 'desc') {
   chrome.storage.local.get(['scanHistory'], (res) => {
     const history = res.scanHistory || [];
     const container = document.getElementById('history');
     container.innerHTML = '';
 
-    history
-      .sort((a, b) => b.score - a.score)
-      .forEach(entry => {
-        const div = document.createElement('div');
-        div.textContent = `${entry.domain} – Score: ${roundToTenths(entry.score)}`;
-        container.appendChild(div);
-      });
+    // Sort based on order
+    history.sort((a, b) => order === 'asc' ? a.score - b.score : b.score - a.score);
+
+    history.forEach(entry => {
+      const div = document.createElement('div');
+      div.textContent = `${entry.domain} – Score: ${entry.score <= 0 ? 'No vulnerabilities found' : roundToTenths(entry.score)}`;
+      container.appendChild(div);
+    });
   });
 }
 
 // ----------------- MAIN -----------------
 document.addEventListener('DOMContentLoaded', () => {
   loadScanHistory();
+
+  // Add event listeners for sort buttons
+  const sortHighBtn = document.getElementById('sort-high');
+  const sortLowBtn = document.getElementById('sort-low');
+  if (sortHighBtn && sortLowBtn) {
+    sortHighBtn.addEventListener('click', () => loadScanHistory('desc'));
+    sortLowBtn.addEventListener('click', () => loadScanHistory('asc'));
+  }
+
+  // Add event listener for clear history button
+  const clearBtn = document.getElementById('clear-history');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      chrome.storage.local.set({ scanHistory: [] }, () => loadScanHistory());
+    });
+  }
 });
 
 // ----------------- When popup opens -----------------
@@ -137,9 +163,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
 
   scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
-  const forceBadSite = true;  // 🔥 Set to 'true' for always triggering ChatGPT during testing
-
-  if (forceBadSite || scaled >= 15) {
+  if (scaled >= 15) {
     scoreElem.className = "danger";
     statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
 
@@ -151,12 +175,12 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     `;
     document.body.appendChild(suggestionsDiv);
 
-  } else if (cvssScore === -1) {
-    scoreElem.className = "danger";
-    statusElem.textContent = "Website Unknown - Use caution!";
-  } else {
+  } else if (cvssScore === 0) {
     scoreElem.className = "safe";
     statusElem.textContent = "✅ No major known vulnerabilities.";
+  } else {
+    scoreElem.className = "danger";
+    statusElem.textContent = "Website Unknown - Use caution!";
   }
 
   saveScanResult(domain, cvssScore);
