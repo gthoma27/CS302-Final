@@ -43,6 +43,11 @@ async function getNVDScore(domain) {
 
 // ----------------- OpenAI API: Get ChatGPT suggestions -----------------
 async function getChatGPTRecommendations(domain) {
+  const apiKey = await getOpenAIKey();
+  if (!apiKey) {
+    return "Please set your OpenAI API key in the extension popup.";
+  }
+
   const prompt = `
 You are a cybersecurity assistant. 
 If the website "${domain}" has a high vulnerability risk, recommend 3 alternative safe and reputable websites that provide similar services. 
@@ -54,7 +59,7 @@ Format your answer nicely in a list.
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer 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',
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -78,10 +83,26 @@ Format your answer nicely in a list.
     }
   } catch (error) {
     console.error('Error fetching ChatGPT recommendations:', error);
-    return "Error fetching recommendations.";
+    return "Error fetching recommendations. Please check your API key.";
   }
 }
 
+// Add these functions for API key management
+function getOpenAIKey() {
+  return new Promise((resolve) => {
+    chrome.storage.sync.get(['openaiApiKey'], function(result) {
+      resolve(result.openaiApiKey || '');
+    });
+  });
+}
+
+function setOpenAIKey(key) {
+  return new Promise((resolve) => {
+    chrome.storage.sync.set({ 'openaiApiKey': key }, function() {
+      resolve();
+    });
+  });
+}
 
 // ----------------- Utilities: Save scan result -----------------
 function roundToTenths(number) {
@@ -138,87 +159,84 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Add API key handling
   const apiKeyInput = document.getElementById('apiKey');
   const saveButton = document.getElementById('saveKey');
-  const statusDiv = document.getElementById('status');
+  const keyStatus = document.getElementById('keyStatus');
 
   // Load existing API key
-  chrome.storage.sync.get(['openaiApiKey'], function(result) {
-    if (result.openaiApiKey) {
-      apiKeyInput.value = result.openaiApiKey;
+  getOpenAIKey().then(key => {
+    if (key) {
+      apiKeyInput.value = key;
+      keyStatus.textContent = 'API key is set';
+      keyStatus.className = 'text-green-600';
     }
   });
 
-  saveButton.addEventListener('click', function() {
+  saveButton.addEventListener('click', async function() {
     const apiKey = apiKeyInput.value.trim();
     
     if (!apiKey) {
-      showStatus('Please enter an API key', 'error');
+      keyStatus.textContent = 'Please enter an API key';
+      keyStatus.className = 'text-red-600';
       return;
     }
 
-    // Save the API key
-    chrome.storage.sync.set({ 'openaiApiKey': apiKey }, function() {
-      showStatus('API key saved successfully!', 'success');
-    });
-  });
-
-  function showStatus(message, type) {
-    statusDiv.textContent = message;
-    statusDiv.className = 'status ' + type;
-    statusDiv.style.display = 'block';
+    await setOpenAIKey(apiKey);
+    keyStatus.textContent = 'API key saved successfully!';
+    keyStatus.className = 'text-green-600';
     
     // Hide the status message after 3 seconds
     setTimeout(() => {
-      statusDiv.style.display = 'none';
+      keyStatus.textContent = 'API key is set';
     }, 3000);
-  }
-});
+  });
 
-// ----------------- When popup opens -----------------
-chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-  if (!tabs || tabs.length === 0) {
-    console.error('No active tab found');
-    return;
-  }
+  // ----------------- When popup opens -----------------
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+    if (!tabs || tabs.length === 0) {
+      console.error('No active tab found');
+      return;
+    }
 
-  const tab = tabs[0];
-  if (!tab.url) {
-    console.error('No URL found for tab');
-    return;
-  }
+    const tab = tabs[0];
+    if (!tab.url) {
+      console.error('No URL found for tab');
+      return;
+    }
 
-  const url = new URL(tab.url);
-  const domain = url.hostname;
-  document.getElementById("domain").textContent = domain;
+    const url = new URL(tab.url);
+    const domain = url.hostname;
+    document.getElementById("domain").textContent = domain;
 
-  const cvssScore = await getNVDScore(domain);
-  const scaled = Math.min(cvssScore * 2, 20);
-  const scoreElem = document.getElementById("score");
-  const statusElem = document.getElementById("status");
+    const cvssScore = await getNVDScore(domain);
+    const scaled = Math.min(cvssScore * 2, 20);
+    const scoreElem = document.getElementById("score");
+    const statusElem = document.getElementById("status");
 
-  scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
+    scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
-  if (scaled >= 15) {
-    scoreElem.className = "danger";
-    statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
+    if (scaled >= 15) {
+      scoreElem.className = "danger";
+      statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
 
-    const suggestions = await getChatGPTRecommendations(domain);
-    const suggestionsDiv = document.createElement('div');
-    suggestionsDiv.innerHTML = `
-      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
-      <p class="text-gray-600">${(await suggestions).replace(/\n/g, "<br>")}</p>
-    `;
-    document.body.appendChild(suggestionsDiv);
+      const suggestions = await getChatGPTRecommendations(domain);
+      const suggestionsDiv = document.createElement('div');
+      suggestionsDiv.innerHTML = `
+        <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
+        <p class="text-gray-600">${(await suggestions).replace(/\n/g, "<br>")}</p>
+      `;
+      document.body.appendChild(suggestionsDiv);
 
-  } else if (cvssScore === 0) {
-    scoreElem.className = "safe";
-    statusElem.textContent = "✅ No major known vulnerabilities.";
-  } else {
-    scoreElem.className = "danger";
-    statusElem.textContent = "Website Unknown - Use caution!";
-  }
+    } else if (cvssScore === 0) {
+      scoreElem.className = "safe";
+      statusElem.textContent = "✅ No major known vulnerabilities.";
+    } else {
+      scoreElem.className = "danger";
+      statusElem.textContent = "Website Unknown - Use caution!";
+    }
 
-  saveScanResult(domain, cvssScore);
-  loadScanHistory();
+    saveScanResult(domain, cvssScore);
+    loadScanHistory();
+  });
 });
