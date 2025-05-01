@@ -137,6 +137,42 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.local.set({ scanHistory: [] }, () => loadScanHistory());
     });
   }
+
+  const apiKeyInput = document.getElementById('apiKey');
+  const saveButton = document.getElementById('saveKey');
+  const statusDiv = document.getElementById('status');
+
+  // Load existing API key
+  chrome.storage.sync.get(['openaiApiKey'], function(result) {
+    if (result.openaiApiKey) {
+      apiKeyInput.value = result.openaiApiKey;
+    }
+  });
+
+  saveButton.addEventListener('click', function() {
+    const apiKey = apiKeyInput.value.trim();
+    
+    if (!apiKey) {
+      showStatus('Please enter an API key', 'error');
+      return;
+    }
+
+    // Save the API key
+    chrome.storage.sync.set({ 'openaiApiKey': apiKey }, function() {
+      showStatus('API key saved successfully!', 'success');
+    });
+  });
+
+  function showStatus(message, type) {
+    statusDiv.textContent = message;
+    statusDiv.className = 'status ' + type;
+    statusDiv.style.display = 'block';
+    
+    // Hide the status message after 3 seconds
+    setTimeout(() => {
+      statusDiv.style.display = 'none';
+    }, 3000);
+  }
 });
 
 // ----------------- When popup opens -----------------
