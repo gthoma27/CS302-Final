@@ -1,3 +1,7 @@
+// CITATION: A majority of this code was taken and augmented from
+// https://github.com/picopalette/phishing-detection-plugin/blob/master/frontend/js/features.js
+
+
 var features = {};
 
 // Having Ip-Address
@@ -19,6 +23,15 @@ if(ip.test(urlDomain)||patt.test(urlDomain)||patt2.test(urlDomain)){
     features["having_IP_Address"]="-1";
 }
 
+// URL length
+
+if(url.length<54){
+    features["URL_Length"]="-1";
+}else if(url.length>=54&&url.length<=75){
+    features["URL_Length"]="0";
+}else{
+    features["URL_Length"]="1";
+}
 
 // Prefix_Suffix:                coef = 3.3223, Ratio = 27.72
 
@@ -34,7 +47,9 @@ if(patt.test(urlDomain)){
 
 if((onlyDomain.match(RegExp('\\.','g'))||[]).length==1){ 
     features["having_Sub_Domain"]="-1";
-} else{
+}else if((onlyDomain.match(RegExp('\\.','g'))||[]).length==2){ 
+    result["No. of Sub Domains"]="0";    
+}else{
     features["having_Sub_Domain"]="1";
 }
 
@@ -117,4 +132,5 @@ if(iframes.length == 0) {
     features["Iframe"] = "1";
 }
 
+// Add to local storage, may be a better way to do this 
 chrome.storage.local.set({features});

@@ -1,24 +1,25 @@
 let sorted = [];
 let probability;
 const weights = {
-  "having_IP_Address": 0.36,
-  "having_At_Symbol": 0.21,
-  "double_slash_redirecting": -0.15,
-  "Prefix_Suffix": 3.08,
-  "having_Sub_Domain": 0.65,
-  "URL_of_Anchor": 3.63,
+  "having_IP_Address": 0.35,
+  "URL_Length": 0.08,
+  "having_At_Symbol": 0.15,
+  "double_slash_redirecting": -0.13,
+  "Prefix_Suffix": 3.07,
+  "having_Sub_Domain": 0.64,
+  "URL_of_Anchor": 3.6,
   "HTTPS_token": -0.29,
-  "SFH": 0.86,
-  "Iframe": -0.16
+  "SFH": 0.78,
+  "Iframe": -0.28
 };
 
 const intercept = 4.50696702;
-// 1/ 1+e^-z
+const threshold = 0.6; // Calculated in jupiter notebook, precision should be 0.9 and accuracy at around 0.85
 
 function Prob_calculation(features){
   var z = intercept;
   for (const feature in weights){
-    z = weights[feature] * features[feature];
+    z = (weights[feature] + Math.random()/10) * features[feature];
   }
 
   console.log("z = ", z);
@@ -159,19 +160,20 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   const domain = url.hostname;
   document.getElementById("domain").textContent = domain;
 
-  //const safety = await safe_check(url); 
+  //const safety = await safe_check(url); // Disabled google api just so excess calls are not made
   //document.getElementById("safety").textContent = safety;
 
-  if(safety != "Site is not Safe!"){
-    chrome.storage.local.get("features", (result) => {
+  
+  chrome.storage.local.get("features", (result) => {
+    if (result.features){
       var features = result.features
 
       var probability = Prob_calculation(features);    
       probability = probability.toFixed(2)
       document.getElementById("score").textContent = probability;
-      
-    });  
-  }
+    }
+  });  
+  
 
   saveScanResult(domain, probability);
   loadScanHistory();
