@@ -2,7 +2,7 @@
 // Using googles safebrowsing API v4
 async function safe_check(url){
 
-  const API_KEY = 'AIzaSyC8cknUlHcUJb0NjagV4mfJZ9-0mAxnQEY';
+  const API_KEY = '----';
 
   // Test site that should work: 'http://malware.testing.google.test/testing/malware/'
 

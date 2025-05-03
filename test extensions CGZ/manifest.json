@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name" : "My chrome extension",
+  "version": "0.1.0",
+  "description": "My first extension",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "storage"
+
+    ]
+  }
+    
+
+
