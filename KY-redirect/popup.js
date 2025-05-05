@@ -121,6 +121,43 @@ function loadScanHistory(order = 'desc') {
     });
   });
 }
+async function getSuggestions(domain) {
+  const prompt = `The website "${domain}" appears unsafe. Suggest 3 reputable alternative websites that offer similar content or services.`;
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      
+
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer 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",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 100,
+        temperature: 0.7
+      })
+    });
+
+    const data = await response.json();
+
+    console.log("OpenAI full response:", data);
+
+    if (!data.choices || !data.choices[0]) {
+      throw new Error("Invalid response from OpenAI: " + JSON.stringify(data));
+    }
+
+    const reply = data.choices[0].message.content;
+    document.getElementById("suggestions").innerText = reply;
+  } catch (err) {
+    console.error("Error getting suggestions:", err);
+    document.getElementById("suggestions").innerText = "Failed to get suggestions.";
+  }
+}
+
+
 
 // ----------------- MAIN -----------------
 document.addEventListener('DOMContentLoaded', () => {
@@ -169,8 +206,14 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       var features = result.features
 
       var probability = Prob_calculation(features);    
-      probability = probability.toFixed(2)
+      probability = parseFloat(probability.toFixed(2));
       document.getElementById("score").textContent = probability;
+      
+      // Automatically suggest safe sites if score is high
+      
+        getSuggestions(domain);
+      
+      
     }
   });  
   
@@ -178,3 +221,15 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   saveScanResult(domain, probability);
   loadScanHistory();
 });
+// ✅ Attach ChatGPT button after DOM loads
+document.addEventListener("DOMContentLoaded", () => {
+  const suggestBtn = document.getElementById("suggest-button");
+  if (suggestBtn) {
+    suggestBtn.addEventListener("click", () => {
+      const domain = document.getElementById("domain").textContent;
+      console.log("✅ Suggest button clicked for:", domain);
+      getSuggestions(domain);
+    });
+  }
+});
+
