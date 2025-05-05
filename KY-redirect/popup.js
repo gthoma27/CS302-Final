@@ -44,17 +44,16 @@ async function getNVDScore(domain) {
 // ----------------- OpenAI API: Get ChatGPT suggestions -----------------
 async function getChatGPTRecommendations(domain) {
   const prompt = `
-You are a cybersecurity assistant. 
 If the website "${domain}" has a high vulnerability risk, recommend 3 alternative safe and reputable websites that provide similar services. 
-If you don't recognize the website, recommend 3 general safe websites like Google, Wikipedia, or DuckDuckGo.
-Format your answer nicely in a list.
+If you don't recognize the website, recommend general safe websites like Google, Wikipedia, or DuckDuckGo.
+Return them as a list.
 `;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer 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',
+        'Authorization': 'Bearer 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',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -69,8 +68,6 @@ Format your answer nicely in a list.
     });
 
     const data = await response.json();
-    console.log("OpenAI response:", data);
-
     if (data.choices && data.choices.length > 0) {
       return data.choices[0].message.content.trim();
     } else {
@@ -81,6 +78,8 @@ Format your answer nicely in a list.
     return "Error fetching recommendations.";
   }
 }
+
+
 
 
 // ----------------- Utilities: Save scan result -----------------
@@ -163,26 +162,57 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
 
   scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
-  if (scaled >= 15) {
-    scoreElem.className = "danger";
-    statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
+  if (cvssScore === 0) {
+    scoreElem.className = "safe";
+    statusElem.textContent = "✅ No known vulnerabilities.";
+  } else if (cvssScore > 0 && cvssScore <= 3) {
+    scoreElem.className = "low-risk";
+    statusElem.textContent = "⚠️ Low risk site. Consider alternatives.";
 
     const suggestions = await getChatGPTRecommendations(domain);
+    console.log("GPT Suggestions for", domain, ":", suggestions);
+
     const suggestionsDiv = document.createElement('div');
     suggestionsDiv.innerHTML = `
       <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
-      <p class="text-gray-600">${(await suggestions).replace(/\n/g, "<br>")}</p>
+      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
+
     `;
     document.body.appendChild(suggestionsDiv);
 
-  } else if (cvssScore === 0) {
-    scoreElem.className = "safe";
-    statusElem.textContent = "✅ No major known vulnerabilities.";
-  } else {
-    scoreElem.className = "danger";
-    statusElem.textContent = "Website Unknown - Use caution!";
+  } else if (cvssScore > 3 && cvssScore <= 7) {
+    scoreElem.className = "medium-risk";
+    statusElem.textContent = "⚠️ Medium risk site. Consider alternatives.";
+
+    const suggestions = await getChatGPTRecommendations(domain);
+    console.log("GPT Suggestions for", domain, ":", suggestions);
+
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.innerHTML = `
+      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
+      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
+
+    `;
+    document.body.appendChild(suggestionsDiv);
+
+  } else if (cvssScore > 7 && cvssScore <= 10) {
+    scoreElem.className = "high-risk";
+    statusElem.textContent = "🚨 High risk site! Safer alternatives recommended.";
+
+    const suggestions = await getChatGPTRecommendations(domain);
+    console.log("GPT Suggestions for", domain, ":", suggestions);
+
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.innerHTML = `
+      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
+      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
+
+    `;
+    document.body.appendChild(suggestionsDiv);
   }
 
   saveScanResult(domain, cvssScore);
   loadScanHistory();
 });
+
+
