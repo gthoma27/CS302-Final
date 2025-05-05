@@ -91,16 +91,25 @@ async function checkNVDScore(domain) {
   }
 }
 
-// Get website suggestions
-async function getSuggestions(domain) {
-  const prompt = `The website "${domain}" appears unsafe. Suggest 3 reputable alternative websites that offer similar content or services.`;
+// ----------------- OpenAI API: Get ChatGPT suggestions -----------------
+async function getChatGPTRecommendations(domain) {
+  const apiKey = await getOpenAIKey();
+  if (!apiKey) {
+    return "Please set your OpenAI API key in the extension popup.";
+  }
+
+  const prompt = `
+If the website "${domain}" has a high vulnerability risk, recommend 3 alternative safe and reputable websites that provide similar services. 
+If you don't recognize the website, recommend general safe websites like Google, Wikipedia, or DuckDuckGo.
+Return them as a list.
+`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": "Bearer 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",
-        "Content-Type": "application/json"
+        'Authorization': 'Bearer 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',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
@@ -111,18 +120,18 @@ async function getSuggestions(domain) {
     });
 
     const data = await response.json();
-    if (data.choices && data.choices[0]) {
-      const suggestionsDiv = document.getElementById("suggestions");
-      suggestionsDiv.innerHTML = `
-        <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
-        <p class="text-gray-600">${data.choices[0].message.content.replace(/\n/g, "<br>")}</p>
-      `;
+    if (data.choices && data.choices.length > 0) {
+      return data.choices[0].message.content.trim();
+    } else {
+      return "No suggestions found.";
     }
   } catch (err) {
     console.error("Error getting suggestions:", err);
     document.getElementById("suggestions").innerHTML = "Failed to get suggestions.";
   }
 }
+
+
 
 // Add these functions for API key management
 function getOpenAIKey() {
@@ -264,17 +273,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     scoreElem.textContent = `${(highestScore * 100).toFixed(1)}%`;
 
-    if (highestScore >= 0.6) {
-      scoreElem.className = "danger";
-      statusElem.textContent = "⚠️ Warning: High risk detected!";
-      getSuggestions(domain);
-    } else if (highestScore === 0) {
-      scoreElem.className = "safe";
-      statusElem.textContent = "✅ No major risks detected.";
-    } else {
-      scoreElem.className = "warning";
-      statusElem.textContent = "⚠️ Moderate risk detected.";
-    }
+  if (scaled >= 15) {
+    scoreElem.className = "danger";
+    statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
+
+    const suggestions = await getChatGPTRecommendations(domain);
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.innerHTML = `
+      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
+      <p class="text-gray-600">${(await suggestions).replace(/\n/g, "<br>")}</p>
+    `;
+    document.body.appendChild(suggestionsDiv);
+
+  } else if (cvssScore === 0) {
+    scoreElem.className = "safe";
+    statusElem.textContent = "✅ No major known vulnerabilities.";
+  } else {
+    scoreElem.className = "danger";
+    statusElem.textContent = "Website Unknown - Use caution!";
+  }
 
     saveScanResult(domain, highestScore);
     loadScanHistory();
