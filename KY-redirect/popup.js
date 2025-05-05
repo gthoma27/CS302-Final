@@ -71,7 +71,7 @@ async function checkNVDScore(domain) {
   try {
     const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${domain}&resultsPerPage=5`, {
       headers: {
-        "apiKey": "888a352e-c59e-4a55-8ca3-38a98ff23af9"
+        "apiKey": "0fdbf5b0-38ff-45e8-b0f8-d07aff261bc1"
       }
     });
 

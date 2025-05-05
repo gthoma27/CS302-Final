@@ -41,10 +41,10 @@ function collectFeatures() {
   }
 
   // @ Symbol
-  features["@ Symbol"] = url.includes('@') ? "1" : "-1";
+  features["having_At_Symbol"] = url.includes('@') ? "1" : "-1";
 
   // Double Slash Redirecting
-  features["Redirecting using //"] = url.lastIndexOf("//") > 7 ? "1" : "-1";
+  features["double_slash_redirecting"] = url.lastIndexOf("//") > 7 ? "1" : "-1";
 
   // SFH (Server Form Handler)
   const forms = document.getElementsByTagName("form");
@@ -78,7 +78,7 @@ function collectFeatures() {
 
   const totalCount = phishCount + legitCount;
   const outRequest = (phishCount / totalCount) * 100;
-  features["Anchor"] = outRequest < 31 ? "-1" : "1";
+  features["URL_of_Anchor"] = outRequest < 31 ? "-1" : "1";
 
   // HTTPS Token
   features["HTTPS_token"] = url.startsWith('https://') ? "-1" : "1";
@@ -92,3 +92,13 @@ function collectFeatures() {
 
 // Run feature collection when page loads
 collectFeatures();
+
+chrome.storage.local.set({ score: calculatedScore });
+
+document.addEventListener('DOMContentLoaded', () => {
+  chrome.storage.local.get('score', (result) => {
+    document.getElementById('score').textContent = result.score ?? '-';
+  });
+});
+
+chrome.storage.local.get(null, console.log);
