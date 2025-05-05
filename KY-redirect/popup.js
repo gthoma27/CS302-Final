@@ -49,17 +49,16 @@ async function getChatGPTRecommendations(domain) {
   }
 
   const prompt = `
-You are a cybersecurity assistant. 
 If the website "${domain}" has a high vulnerability risk, recommend 3 alternative safe and reputable websites that provide similar services. 
-If you don't recognize the website, recommend 3 general safe websites like Google, Wikipedia, or DuckDuckGo.
-Format your answer nicely in a list.
+If you don't recognize the website, recommend general safe websites like Google, Wikipedia, or DuckDuckGo.
+Return them as a list.
 `;
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': 'Bearer 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',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
@@ -74,8 +73,6 @@ Format your answer nicely in a list.
     });
 
     const data = await response.json();
-    console.log("OpenAI response:", data);
-
     if (data.choices && data.choices.length > 0) {
       return data.choices[0].message.content.trim();
     } else {
@@ -86,6 +83,8 @@ Format your answer nicely in a list.
     return "Error fetching recommendations. Please check your API key.";
   }
 }
+
+
 
 // Add these functions for API key management
 function getOpenAIKey() {
@@ -216,27 +215,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
-    if (scaled >= 15) {
-      scoreElem.className = "danger";
-      statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
+  if (scaled >= 15) {
+    scoreElem.className = "danger";
+    statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
 
-      const suggestions = await getChatGPTRecommendations(domain);
-      const suggestionsDiv = document.createElement('div');
-      suggestionsDiv.innerHTML = `
-        <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
-        <p class="text-gray-600">${(await suggestions).replace(/\n/g, "<br>")}</p>
-      `;
-      document.body.appendChild(suggestionsDiv);
+    const suggestions = await getChatGPTRecommendations(domain);
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.innerHTML = `
+      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
+      <p class="text-gray-600">${(await suggestions).replace(/\n/g, "<br>")}</p>
+    `;
+    document.body.appendChild(suggestionsDiv);
 
-    } else if (cvssScore === 0) {
-      scoreElem.className = "safe";
-      statusElem.textContent = "✅ No major known vulnerabilities.";
-    } else {
-      scoreElem.className = "danger";
-      statusElem.textContent = "Website Unknown - Use caution!";
-    }
+  } else if (cvssScore === 0) {
+    scoreElem.className = "safe";
+    statusElem.textContent = "✅ No major known vulnerabilities.";
+  } else {
+    scoreElem.className = "danger";
+    statusElem.textContent = "Website Unknown - Use caution!";
+  }
 
     saveScanResult(domain, cvssScore);
     loadScanHistory();
   });
 });
+
+
