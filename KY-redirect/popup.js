@@ -53,11 +53,11 @@ Return them as a list.
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer proj_b22E1CKmiuWbZwfhC5sXGsE9',
+        'Authorization': 'Bearer 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',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: "gpt-4.1-nano",
+        model: "gpt-3.5-turbo",
         messages: [
           { role: "system", content: "You are a helpful assistant that recommends safer websites." },
           { role: "user", content: prompt }
