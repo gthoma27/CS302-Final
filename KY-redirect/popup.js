@@ -1,4 +1,33 @@
 let sorted = [];
+const weights = {
+  "having_IP_Address": 0.35,
+  "URL_Length": 0.08,
+  "having_At_Symbol": 0.15,
+  "double_slash_redirecting": -0.13,
+  "Prefix_Suffix": 3.07,
+  "having_Sub_Domain": 0.64,
+  "URL_of_Anchor": 3.6,
+  "HTTPS_token": -0.29,
+  "SFH": 0.78,
+  "Iframe": -0.28
+};
+
+const intercept = 4.50696702; // Found in jupiter notebook, used in sigmoid function
+
+function Prob_calculation(features){
+  var z = intercept;
+
+  // Calculate the z, which is the intercept + weight1*feature1 + etc..
+  for (const feature in weights){
+    z += (weights[feature]) * features[feature];
+  }
+
+  var probability = 1 / (1 + Math.pow(Math.E, (z * -1)))
+
+  return probability; 
+}
+
+
 
 // Helper to extract base domain (same as background.js)
 function getBaseDomain(hostname) {
@@ -8,6 +37,57 @@ function getBaseDomain(hostname) {
   }
   return hostname;
 }
+
+// Google Safebrowsing API 
+async function safe_check(url){
+
+  const API_KEY = 'AIzaSyC8cknUlHcUJb0NjagV4mfJZ9-0mAxnQEY';
+
+  // Test site that should work: 'http://malware.testing.google.test/testing/malware/'
+
+  // Make a http post request to google url site
+  try {
+    const response = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      // POST requests are usually inputted in JSON formatt
+      body: JSON.stringify({
+        // Proper Payload format documented on googles website : https://developers.google.com/safe-browsing/v4/lookup-api
+        "client": {
+          "clientId":      "CS_TEST",
+          "clientVersion": "1.5.2"
+        },
+        "threatInfo": {
+          "threatTypes":      ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+          "platformTypes":    ["ANY_PLATFORM"],
+          "threatEntryTypes": ["URL"],
+          "threatEntries": [
+            {"url": url}   // Url to be inputted
+      ]
+    }
+
+
+      })
+    });
+
+    // Grab data from response
+    const data = await response.json();
+
+    // Check if the data.matches object is established
+    if (data && data.matches) {
+      return "Site is not Safe!"
+    } else { // If not, the site was not found or was not listed as unsafe
+      return "Site is not documented";
+    }
+  } catch (error) { // Possible HTTP error
+    console.error('HTTP Post Error', error);
+    return "Error Using API";
+  }
+
+}
+
 
 // ----------------- NVD API: Get vulnerability score -----------------
 //
@@ -138,6 +218,30 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+function get_feature_data() {
+  
+  // Have to create a promise in order to handle asynchronous Calls
+  // Resolve means the call is successful, reject means there was a error
+  return new Promise((resolve, reject) => {
+      
+      chrome.storage.local.get("features", (result) => {
+        // Check if the call was successful  
+        if (chrome.runtime.lastError) {
+              return reject(chrome.runtime.lastError);
+          }  
+
+          // Grab the features and calculate the probability
+          var features = result.features
+          var probability = Prob_calculation(features);
+          probability = probability * 100;    
+          probability = probability.toFixed(0);
+
+          // If there are no errors, resolve with the probability
+          resolve(probability);
+      });
+  });
+}
+
 // ----------------- When popup opens -----------------
 chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   if (!tabs || tabs.length === 0) {
@@ -155,12 +259,32 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   const domain = url.hostname;
   document.getElementById("domain").textContent = domain;
 
+  //const safety = await safe_check(url); // Disabled google api just so excess calls are not made
+  //document.getElementById("safety").textContent = safety;
+
   const cvssScore = await getNVDScore(domain);
   const scaled = Math.min(cvssScore * 2, 20);
   const scoreElem = document.getElementById("score");
   const statusElem = document.getElementById("status");
 
   scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
+
+  /*
+  chrome.storage.local.get("features", (result) => {
+    if (result.features){
+      var features = result.features
+
+      var probability = Prob_calculation(features);    
+      probability = probability.toFixed(2)
+      document.getElementById("score").textContent = probability;
+      saveScanResult(domain, probability);
+    }
+  });  
+            Original way to grab the features object from features.js, May use?
+  */
+
+  var probability = await get_feature_data();
+  document.getElementById("Ml_score").textContent = probability;
 
   if (cvssScore === 0) {
     scoreElem.className = "safe";
