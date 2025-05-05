@@ -40,12 +40,19 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     try {
       const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`, {
         headers: {
-          "apiKey": "888a352e-c59e-4a55-8ca3-38a98ff23af9"  // Optional but recommended
+          "apiKey": "888a352e-c59e-4a55-8ca3-38a98ff23af9"
         }
       });
-      console.log("Fetching URL:", `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`);
+      console.log("Fetching URL:", response.url, "Status:", response.status);
+  
+      if (!response.ok) {
+        console.error("[NVD fetch error] HTTP status:", response.status, "StatusText:", response.statusText);
+        return 0;
+      }
+  
       const data = await response.json();
-      console.log("API response: ", data)
+      console.log("API response: ", data);
+  
       if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
   
       const scores = data.vulnerabilities
