@@ -9,69 +9,14 @@ function getBaseDomain(hostname) {
   return hostname;
 }
 
-// ML Model weights and configuration
-const weights = {
-  "having_IP_Address": 0.35,
-  "URL_Length": 0.08,
-  "having_At_Symbol": 0.15,
-  "double_slash_redirecting": -0.13,
-  "Prefix_Suffix": 3.07,
-  "having_Sub_Domain": 0.64,
-  "URL_of_Anchor": 3.6,
-  "HTTPS_token": -0.29,
-  "SFH": 0.78,
-  "Iframe": -0.28
-};
-
-const intercept = 4.50696702;
-const threshold = 0.6;
-
-// Calculate ML model probability
-function calculateMLProbability(features) {
-  let z = intercept;
-  for (const feature in weights) {
-    if (features[feature]) {
-      z += (weights[feature] + Math.random()/10) * parseFloat(features[feature]);
-    }
-  }
-  return 1 / (1 + Math.pow(Math.E, (z * -1)));
-}
-
-// Google Safe Browsing API check
-async function checkGoogleSafeBrowsing(url) {
-  const API_KEY = 'AIzaSyC8cknUlHcUJb0NjagV4mfJZ9-0mAxnQEY';
+// ----------------- NVD API: Get vulnerability score -----------------
+//
+async function getNVDScore(domain) {
+  const keyword = getBaseDomain(domain);
   try {
-    const response = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        client: {
-          clientId: "CS_TEST",
-          clientVersion: "1.5.2"
-        },
-        threatInfo: {
-          threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
-          platformTypes: ["ANY_PLATFORM"],
-          threatEntryTypes: ["URL"],
-          threatEntries: [{ url: url }]
-        }
-      })
-    });
-
-    const data = await response.json();
-    return data && data.matches ? 1.0 : 0.0; // Return 1.0 if unsafe, 0.0 if safe
-  } catch (error) {
-    console.error('Google Safe Browsing API Error:', error);
-    return 0.0;
-  }
-}
-
-// NVD API check
-async function checkNVDScore(domain) {
-  try {
-    const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${domain}&resultsPerPage=5`, {
+    const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`, {
       headers: {
-        "apiKey": "e76e030a-0c94-486e-afb9-3458a09194ef"
+        "apiKey": "888a352e-c59e-4a55-8ca3-38a98ff23af9"
       }
     });
 
@@ -79,25 +24,25 @@ async function checkNVDScore(domain) {
     if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
 
     const scores = data.vulnerabilities
-      .map(v => v.cvssMetricV31?.[0]?.cvssData?.baseScore || 0)
+      .map(vuln => {
+        const metrics = vuln.cve.metrics || {};
+        const v3 = metrics.cvssMetricV31?.[0]?.cvssData?.baseScore;
+        const v2 = metrics.cvssMetricV2?.[0]?.cvssData?.baseScore;
+        return v3 ?? v2 ?? 0;
+      })
       .filter(score => score > 0)
       .slice(0, 3);
 
     if (scores.length === 0) return 0;
-    return scores.reduce((a, b) => a + b, 0) / scores.length / 10; // Normalize to 0-1 scale
+    return scores.reduce((a, b) => a + b, 0) / scores.length;
   } catch (err) {
-    console.error("[NVD Error]", err);
+    console.error("NVD fetch error:", err);
     return 0;
   }
 }
 
 // ----------------- OpenAI API: Get ChatGPT suggestions -----------------
 async function getChatGPTRecommendations(domain) {
-  const apiKey = await getOpenAIKey();
-  if (!apiKey) {
-    return "Please set your OpenAI API key in the extension popup.";
-  }
-
   const prompt = `
 If the website "${domain}" has a high vulnerability risk, recommend 3 alternative safe and reputable websites that provide similar services. 
 If you don't recognize the website, recommend general safe websites like Google, Wikipedia, or DuckDuckGo.
@@ -105,17 +50,20 @@ Return them as a list.
 `;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        'Authorization': 'Bearer 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',
+        'Authorization': 'Bearer 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',
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: "gpt-3.5-turbo",
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 100,
-        temperature: 0.7
+        messages: [
+          { role: "system", content: "You are a helpful assistant that recommends safer websites." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.5,
+        max_tokens: 300
       })
     });
 
@@ -125,30 +73,14 @@ Return them as a list.
     } else {
       return "No suggestions found.";
     }
-  } catch (err) {
-    console.error("Error getting suggestions:", err);
-    document.getElementById("suggestions").innerHTML = "Failed to get suggestions.";
+  } catch (error) {
+    console.error('Error fetching ChatGPT recommendations:', error);
+    return "Error fetching recommendations.";
   }
 }
 
 
 
-// Add these functions for API key management
-function getOpenAIKey() {
-  return new Promise((resolve) => {
-    chrome.storage.sync.get(['openaiApiKey'], function(result) {
-      resolve(result.openaiApiKey || '');
-    });
-  });
-}
-
-function setOpenAIKey(key) {
-  return new Promise((resolve) => {
-    chrome.storage.sync.set({ 'openaiApiKey': key }, function() {
-      resolve();
-    });
-  });
-}
 
 // ----------------- Utilities: Save scan result -----------------
 function roundToTenths(number) {
@@ -204,96 +136,81 @@ document.addEventListener('DOMContentLoaded', () => {
       chrome.storage.local.set({ scanHistory: [] }, () => loadScanHistory());
     });
   }
+});
 
-  // Add API key handling
-  const apiKeyInput = document.getElementById('apiKey');
-  const saveButton = document.getElementById('saveKey');
-  const keyStatus = document.getElementById('keyStatus');
+// ----------------- When popup opens -----------------
+chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+  if (!tabs || tabs.length === 0) {
+    console.error('No active tab found');
+    return;
+  }
 
-  // Load existing API key
-  getOpenAIKey().then(key => {
-    if (key) {
-      apiKeyInput.value = key;
-      keyStatus.textContent = 'API key is set';
-      keyStatus.className = 'text-green-600';
-    }
-  });
+  const tab = tabs[0];
+  if (!tab.url) {
+    console.error('No URL found for tab');
+    return;
+  }
 
-  saveButton.addEventListener('click', async function() {
-    const apiKey = apiKeyInput.value.trim();
-    
-    if (!apiKey) {
-      keyStatus.textContent = 'Please enter an API key';
-      keyStatus.className = 'text-red-600';
-      return;
-    }
+  const url = new URL(tab.url);
+  const domain = url.hostname;
+  document.getElementById("domain").textContent = domain;
 
-    await setOpenAIKey(apiKey);
-    keyStatus.textContent = 'API key saved successfully!';
-    keyStatus.className = 'text-green-600';
-    
-    // Hide the status message after 3 seconds
-    setTimeout(() => {
-      keyStatus.textContent = 'API key is set';
-    }, 3000);
-  });
+  const cvssScore = await getNVDScore(domain);
+  const scaled = Math.min(cvssScore * 2, 20);
+  const scoreElem = document.getElementById("score");
+  const statusElem = document.getElementById("status");
 
-  // ----------------- When popup opens -----------------
-  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-    if (!tabs || tabs.length === 0) {
-      console.error('No active tab found');
-      return;
-    }
+  scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
-    const tab = tabs[0];
-    if (!tab.url) {
-      console.error('No URL found for tab');
-      return;
-    }
-
-    const url = new URL(tab.url);
-    const domain = url.hostname;
-    document.getElementById("domain").textContent = domain;
-
-    // Get all scores
-    const [mlScore, googleScore, nvdScore] = await Promise.all([
-      new Promise(resolve => {
-        chrome.storage.local.get("features", (result) => {
-          resolve(result.features ? calculateMLProbability(result.features) : 0);
-        });
-      }),
-      checkGoogleSafeBrowsing(tab.url),
-      checkNVDScore(domain)
-    ]);
-
-    // Get the highest score
-    const highestScore = Math.max(mlScore, googleScore, nvdScore);
-    const scoreElem = document.getElementById("score");
-    const statusElem = document.getElementById("status");
-
-    scoreElem.textContent = `${(highestScore * 100).toFixed(1)}%`;
-
-  if (scaled >= 15) {
-    scoreElem.className = "danger";
-    statusElem.textContent = "⚠️ Warning: High vulnerability risk!";
+  if (cvssScore === 0) {
+    scoreElem.className = "safe";
+    statusElem.textContent = "✅ No known vulnerabilities.";
+  } else if (cvssScore > 0 && cvssScore <= 3) {
+    scoreElem.className = "low-risk";
+    statusElem.textContent = "⚠️ Low risk site. Consider alternatives.";
 
     const suggestions = await getChatGPTRecommendations(domain);
+    console.log("GPT Suggestions for", domain, ":", suggestions);
+
     const suggestionsDiv = document.createElement('div');
     suggestionsDiv.innerHTML = `
       <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
-      <p class="text-gray-600">${(await suggestions).replace(/\n/g, "<br>")}</p>
+      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
+
     `;
     document.body.appendChild(suggestionsDiv);
 
-  } else if (cvssScore === 0) {
-    scoreElem.className = "safe";
-    statusElem.textContent = "✅ No major known vulnerabilities.";
-  } else {
-    scoreElem.className = "danger";
-    statusElem.textContent = "Website Unknown - Use caution!";
+  } else if (cvssScore > 3 && cvssScore <= 7) {
+    scoreElem.className = "medium-risk";
+    statusElem.textContent = "⚠️ Medium risk site. Consider alternatives.";
+
+    const suggestions = await getChatGPTRecommendations(domain);
+    console.log("GPT Suggestions for", domain, ":", suggestions);
+
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.innerHTML = `
+      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
+      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
+
+    `;
+    document.body.appendChild(suggestionsDiv);
+
+  } else if (cvssScore > 7 && cvssScore <= 10) {
+    scoreElem.className = "high-risk";
+    statusElem.textContent = "🚨 High risk site! Safer alternatives recommended.";
+
+    const suggestions = await getChatGPTRecommendations(domain);
+    console.log("GPT Suggestions for", domain, ":", suggestions);
+
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.innerHTML = `
+      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
+      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
+
+    `;
+    document.body.appendChild(suggestionsDiv);
   }
 
-    saveScanResult(domain, highestScore);
-    loadScanHistory();
-  });
+  saveScanResult(domain, cvssScore);
+  loadScanHistory();
 });

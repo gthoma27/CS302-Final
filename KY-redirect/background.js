@@ -28,19 +28,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           chrome.action.setBadgeText({ tabId, text: "" });
         }
       });
-
-      getSimilarWebsites(domain).then(similarSites => {
-        if (similarSites.length > 0) {
-          chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            func: (sites) => {
-              const message = "Similar websites you might be interested in:\n" + sites.join('\n');
-              alert(message);
-            },
-            args: [similarSites]
-          });
-        }
-      });
     }
   });
 
