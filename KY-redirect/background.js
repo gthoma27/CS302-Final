@@ -1,3 +1,4 @@
+// truncates domain to last two parts
 function getBaseDomain(hostname) {
   const parts = hostname.split('.');
   if (parts.length >= 2) {
