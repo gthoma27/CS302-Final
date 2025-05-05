@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Phishing Detector (Multi-Source)",
+  "name": "Phishing Detector (NVD-based)",
   "version": "1.0",
   "permissions": [
     "tabs",
@@ -11,18 +11,11 @@
   ],
   "host_permissions": [
     "https://services.nvd.nist.gov/*",
-    "https://api.openai.com/*",
-    "https://safebrowsing.googleapis.com/*"
+    "https://api.openai.com/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
-    }
-  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon.png"

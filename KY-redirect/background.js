@@ -1,4 +1,3 @@
-// truncates domain to last two parts
 function getBaseDomain(hostname) {
   const parts = hostname.split('.');
   if (parts.length >= 2) {
@@ -26,19 +25,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
           chrome.action.setBadgeBackgroundColor({ tabId, color: "#FF0000" });
         } else {
           chrome.action.setBadgeText({ tabId, text: "" });
-        }
-      });
-
-      getSimilarWebsites(domain).then(similarSites => {
-        if (similarSites.length > 0) {
-          chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            func: (sites) => {
-              const message = "Similar websites you might be interested in:\n" + sites.join('\n');
-              alert(message);
-            },
-            args: [similarSites]
-          });
         }
       });
     }
@@ -73,62 +59,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     } catch (err) {
       console.error("[NVD Error]", err);
       return 0;
-    }
-  }
-  
-  function setOpenAIKey(key) {
-    chrome.storage.sync.set({ 'openaiApiKey': key }, function() {
-      console.log('API key saved');
-    });
-  }
-  
-  function getOpenAIKey() {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get(['openaiApiKey'], function(result) {
-        resolve(result.openaiApiKey || '');
-      });
-    });
-  }
-  
-  async function getSimilarWebsites(domain) {
-    try {
-      const apiKey = await getOpenAIKey();
-      if (!apiKey) {
-        console.error("OpenAI API key not set");
-        return [];
-      }
-
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [
-            {
-              role: "system",
-              content: "You are a helpful assistant that suggests similar websites based on the given domain."
-            },
-            {
-              role: "user",
-              content: `Suggest 3 similar websites to ${domain}. Return only the domain names, one per line.`
-            }
-          ],
-          temperature: 0.7,
-          max_tokens: 100
-        })
-      });
-
-      const data = await response.json();
-      if (data.choices && data.choices[0]) {
-        return data.choices[0].message.content.split('\n').filter(Boolean);
-      }
-      return [];
-    } catch (err) {
-      console.error("[OpenAI Error]", err);
-      return [];
     }
   }
   
