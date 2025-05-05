@@ -214,5 +214,3 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   saveScanResult(domain, cvssScore);
   loadScanHistory();
 });
-
-
