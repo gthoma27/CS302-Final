@@ -2,12 +2,23 @@ import React, { useEffect, useState } from 'react';
 //import { Button } from '@/components/ui/button';  //These are causing errors, likely because the components are not defined.  I've replaced them with standard HTML button.
 //import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; //These are causing errors.  I've replaced them with standard divs.
 //import { Badge } from '@/components/ui/badge';  //This is causing errors. I've replaced it with a span.
-import { AlertTriangle, CheckCircle, Loader2 } from 'lucide-react'; //These are used, so I'm keeping them.
 //import { cn } from '@/lib/utils'; //This is not used, so I'm removing it.
+
+// Add Chrome types
+declare global {
+  namespace chrome {
+    namespace tabs {
+      interface Tab {
+        url?: string;
+      }
+      function query(queryInfo: { active: boolean; currentWindow: boolean }, callback: (tabs: Tab[]) => void): void;
+    }
+  }
+}
 
 // Replace with your NVD API key if you have one (optional, for higher rate limits)
 const NVD_API_KEY = '';
-const NVD_BASE_URL = '[https://services.nvd.nist.gov/rest/json/cves/2.0](https://services.nvd.nist.gov/rest/json/cves/2.0)';
+const NVD_BASE_URL = 'https://services.nvd.nist.gov/rest/json/cves/2.0';
 
 // Mock function to simulate identifying software on a website.
 // In a real extension, this would involve more complex logic.
@@ -170,7 +181,7 @@ const NVDSecurityChecker = () => {
           >
             {loading ? (
               <>
-                <Loader2 className="animate-spin w-5 h-5" />
+                <span className="animate-spin inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
                 Scanning...
               </>
             ) : (
@@ -181,7 +192,7 @@ const NVDSecurityChecker = () => {
 
         {error && (
           <div className="mb-6 bg-red-500/10 border border-red-500/20 text-red-400 rounded-md p-4 flex items-start gap-2">
-            <AlertTriangle className="h-4 w-4 mt-1" />
+            <span className="text-red-400 text-xl">⚠️</span>
             <div>
               <h2 className="text-lg font-semibold">Error</h2>
               <p>{error}</p>
@@ -191,14 +202,14 @@ const NVDSecurityChecker = () => {
 
         {loading && (
           <div className="text-center text-gray-400">
-            <Loader2 className="animate-spin w-8 h-8 mx-auto mb-4" />
+            <span className="animate-spin inline-block w-8 h-8 border-2 border-gray-400 border-t-transparent rounded-full mb-4"></span>
             <p>Scanning for vulnerabilities...</p>
           </div>
         )}
 
         {noVulnerabilitiesFound && (
           <div className="mb-6 bg-green-500/10 border border-green-500/20 text-green-400 rounded-md p-4 flex items-start gap-2">
-            <CheckCircle className="h-4 w-4 mt-1" />
+            <span className="text-green-400 text-xl">✓</span>
             <div>
               <h2 className="text-lg font-semibold">No Vulnerabilities Found</h2>
               <p>
