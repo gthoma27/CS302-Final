@@ -1,19 +1,25 @@
 let sorted = [];
+
+// These are the weights of each feature that is calculated in the Notebook
 const weights = {
-  "having_IP_Address": 0.35,
-  "URL_Length": 0.08,
-  "having_At_Symbol": 0.15,
-  "double_slash_redirecting": -0.13,
-  "Prefix_Suffix": 3.07,
-  "having_Sub_Domain": 0.64,
-  "URL_of_Anchor": 3.6,
-  "HTTPS_token": -0.29,
-  "SFH": 0.78,
-  "Iframe": -0.28
+  "having_IP_Address": 0.32,
+  "URL_Length": 0.01,
+  "having_At_Symbol": 0.18,
+  "double_slash_redirecting": 0.03,
+  "Prefix_Suffix": 3.25,
+  "having_Sub_Domain": 0.69,
+  "URL_of_Anchor": 3.75,
+  "HTTPS_token": -0.36,
+  "SFH": 0.77,
+  "Links_in_tags": 0.92,
+  "Submitting_to_email": -0.14
 };
+
+// Test site that is known for phishing: https://nexopagoexterior.site/
 
 const intercept = 4.50696702; // Found in jupiter notebook, used in sigmoid function
 
+// Uses a sigmoid function apart of the logistic regression model to find the probability
 function Prob_calculation(features){
   var z = intercept;
 
@@ -22,6 +28,7 @@ function Prob_calculation(features){
     z += (weights[feature]) * features[feature];
   }
 
+  // Sigmoid function 1/1+e^-z
   var probability = 1 / (1 + Math.pow(Math.E, (z * -1)))
 
   return probability; 
@@ -224,20 +231,23 @@ function get_feature_data() {
   // Resolve means the call is successful, reject means there was a error
   return new Promise((resolve, reject) => {
       
-      chrome.storage.local.get("features", (result) => {
+      chrome.storage.local.get("features", (response) => { // Grab the object from features.js
+      
         // Check if the call was successful  
         if (chrome.runtime.lastError) {
               return reject(chrome.runtime.lastError);
-          }  
+        }  
 
-          // Grab the features and calculate the probability
-          var features = result.features
-          var probability = Prob_calculation(features);
-          probability = probability * 100;    
-          probability = probability.toFixed(0);
+        // Grab the features and calculate the probability
+        var features = response.features // Changed from result
+        console.log(features);
+        var probability = Prob_calculation(features);
+        probability = probability * 100;    
+        probability = probability.toFixed(0);
 
-          // If there are no errors, resolve with the probability
-          resolve(probability);
+        // If there are no errors, resolve with the probability
+        resolve(probability);
+        
       });
   });
 }
@@ -259,8 +269,9 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   const domain = url.hostname;
   document.getElementById("domain").textContent = domain;
 
-  //const safety = await safe_check(url); // Disabled google api just so excess calls are not made
-  //document.getElementById("safety").textContent = safety;
+  // Make a call for the google api to check agains current url
+  const safety = await safe_check(url); 
+  document.getElementById("safety").textContent = safety; // Update the popup accordingly
 
   const cvssScore = await getNVDScore(domain);
   const scaled = Math.min(cvssScore * 2, 20);
@@ -269,27 +280,14 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
 
   scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
-  /*
-  chrome.storage.local.get("features", (result) => {
-    if (result.features){
-      var features = result.features
+  // Make a call for the content script to get the probability
+  var probability = await get_feature_data(); 
+  document.getElementById("Ml_score").textContent = probability; 
 
-      var probability = Prob_calculation(features);    
-      probability = probability.toFixed(2)
-      document.getElementById("score").textContent = probability;
-      saveScanResult(domain, probability);
-    }
-  });  
-            Original way to grab the features object from features.js, May use?
-  */
-
-  var probability = await get_feature_data();
-  document.getElementById("Ml_score").textContent = probability;
-
-  if (cvssScore === 0) {
+  if (cvssScore === 0 || probability <= 50) {
     scoreElem.className = "safe";
     statusElem.textContent = "✅ No known vulnerabilities.";
-  } else if (cvssScore > 0 && cvssScore <= 3) {
+  } else if (cvssScore > 0 && cvssScore <= 3 || probability <= 55) {
     scoreElem.className = "low-risk";
     statusElem.textContent = "⚠️ Low risk site. Consider alternatives.";
 
@@ -304,7 +302,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     `;
     document.body.appendChild(suggestionsDiv);
 
-  } else if (cvssScore > 3 && cvssScore <= 7) {
+  } else if (cvssScore > 3 && cvssScore <= 7 || probability <= 60) {
     scoreElem.className = "medium-risk";
     statusElem.textContent = "⚠️ Medium risk site. Consider alternatives.";
 
@@ -319,7 +317,7 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     `;
     document.body.appendChild(suggestionsDiv);
 
-  } else if (cvssScore > 7 && cvssScore <= 10) {
+  } else if (cvssScore > 7 && cvssScore <= 10 || probability > 65) {
     scoreElem.className = "high-risk";
     statusElem.textContent = "🚨 High risk site! Safer alternatives recommended.";
 
@@ -334,8 +332,8 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     `;
     document.body.appendChild(suggestionsDiv);
   }
-
-  saveScanResult(domain, cvssScore);
+  
+  saveScanResult(domain, probability);
   loadScanHistory();
 });
 
