@@ -1,103 +1,26 @@
 let sorted = [];
 
-// These are the weights of each feature that is calculated in the Notebook
-const weights = {
-  "having_IP_Address": 0.32,
-  "URL_Length": 0.01,
-  "having_At_Symbol": 0.18,
-  "double_slash_redirecting": 0.03,
-  "Prefix_Suffix": 3.25,
-  "having_Sub_Domain": 0.69,
-  "URL_of_Anchor": 3.75,
-  "HTTPS_token": -0.36,
-  "SFH": 0.77,
-  "Links_in_tags": 0.92,
-  "Submitting_to_email": -0.14
-};
+const SERVER_URL = 'http://localhost:3001'; // Your backend server
 
-// Test site that is known for phishing: https://nexopagoexterior.site/
-
-const intercept = 4.50696702; // Found in jupiter notebook, used in sigmoid function
-
-// Uses a sigmoid function apart of the logistic regression model to find the probability
-function Prob_calculation(features){
-  var z = intercept;
-
-  // Calculate the z, which is the intercept + weight1*feature1 + etc..
-  for (const feature in weights){
-    z += (weights[feature]) * features[feature];
-  }
-
-  // Sigmoid function 1/1+e^-z
-  var probability = 1 / (1 + Math.pow(Math.E, (z * -1)))
-
-  return probability; 
-}
-
-
-
-// Helper to extract base domain (same as background.js)
 function getBaseDomain(hostname) {
   const parts = hostname.split('.');
-  if (parts.length >= 2) {
-    return parts.slice(-2).join('.');
-  }
-  return hostname;
+  return parts.length >= 2 ? parts.slice(-2).join('.') : hostname;
 }
 
-// Google Safebrowsing API 
-async function safe_check(url){
-
-  const API_KEY = 'AIzaSyC8cknUlHcUJb0NjagV4mfJZ9-0mAxnQEY';
-
-  // Test site that should work: 'http://malware.testing.google.test/testing/malware/'
-
-  // Make a http post request to google url site
-  try {
-    const response = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      // POST requests are usually inputted in JSON formatt
-      body: JSON.stringify({
-        // Proper Payload format documented on googles website : https://developers.google.com/safe-browsing/v4/lookup-api
-        "client": {
-          "clientId":      "CS_TEST",
-          "clientVersion": "1.5.2"
-        },
-        "threatInfo": {
-          "threatTypes":      ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
-          "platformTypes":    ["ANY_PLATFORM"],
-          "threatEntryTypes": ["URL"],
-          "threatEntries": [
-            {"url": url}   // Url to be inputted
-      ]
-    }
-
-
-      })
-    });
-
-    // Grab data from response
-    const data = await response.json();
-
-    // Check if the data.matches object is established
-    if (data && data.matches) {
-      return "Site is not Safe!"
-    } else { // If not, the site was not found or was not listed as unsafe
-      return "Site is not documented";
-    }
-  } catch (error) { // Possible HTTP error
-    console.error('HTTP Post Error', error);
-    return "Error Using API";
-  }
-
+async function fetchFromCache(domain) {
+  const res = await fetch(`${SERVER_URL}/domain/${domain}`);
+  return await res.json();
 }
 
+async function storeInCache(domain, score, suggestions) {
+  await fetch(`${SERVER_URL}/domain`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ domain, score, suggestions })
+  });
+}
 
 // ----------------- NVD API: Get vulnerability score -----------------
-//
 async function getNVDScore(domain) {
   const keyword = getBaseDomain(domain);
   try {
@@ -166,9 +89,6 @@ Return them as a list.
   }
 }
 
-
-
-
 // ----------------- Utilities: Save scan result -----------------
 function roundToTenths(number) {
   return Math.round(number * 10) / 10;
@@ -193,7 +113,6 @@ function loadScanHistory(order = 'desc') {
     const container = document.getElementById('history');
     container.innerHTML = '';
 
-    // Sort based on order
     history.sort((a, b) => order === 'asc' ? a.score - b.score : b.score - a.score);
 
     history.forEach(entry => {
@@ -208,7 +127,6 @@ function loadScanHistory(order = 'desc') {
 document.addEventListener('DOMContentLoaded', () => {
   loadScanHistory();
 
-  // Add event listeners for sort buttons
   const sortHighBtn = document.getElementById('sort-high');
   const sortLowBtn = document.getElementById('sort-low');
   if (sortHighBtn && sortLowBtn) {
@@ -216,7 +134,6 @@ document.addEventListener('DOMContentLoaded', () => {
     sortLowBtn.addEventListener('click', () => loadScanHistory('asc'));
   }
 
-  // Add event listener for clear history button
   const clearBtn = document.getElementById('clear-history');
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
@@ -224,33 +141,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
-
-function get_feature_data() {
-  
-  // Have to create a promise in order to handle asynchronous Calls
-  // Resolve means the call is successful, reject means there was a error
-  return new Promise((resolve, reject) => {
-      
-      chrome.storage.local.get("features", (response) => { // Grab the object from features.js
-      
-        // Check if the call was successful  
-        if (chrome.runtime.lastError) {
-              return reject(chrome.runtime.lastError);
-        }  
-
-        // Grab the features and calculate the probability
-        var features = response.features // Changed from result
-        console.log(features);
-        var probability = Prob_calculation(features);
-        probability = probability * 100;    
-        probability = probability.toFixed(0);
-
-        // If there are no errors, resolve with the probability
-        resolve(probability);
-        
-      });
-  });
-}
 
 // ----------------- When popup opens -----------------
 chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
@@ -269,70 +159,47 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   const domain = url.hostname;
   document.getElementById("domain").textContent = domain;
 
-  // Make a call for the google api to check agains current url
-  const safety = await safe_check(url); 
-  document.getElementById("safety").textContent = safety; // Update the popup accordingly
+  let cvssScore, suggestions;
+  const cached = await fetchFromCache(domain);
 
-  const cvssScore = await getNVDScore(domain);
+  if (cached && cached.score !== undefined) {
+    cvssScore = cached.score;
+    suggestions = cached.suggestions;
+  } else {
+    cvssScore = await getNVDScore(domain);
+    suggestions = await getChatGPTRecommendations(domain);
+    await storeInCache(domain, cvssScore, suggestions);
+  }
+
   const scaled = Math.min(cvssScore * 2, 20);
   const scoreElem = document.getElementById("score");
   const statusElem = document.getElementById("status");
 
   scoreElem.textContent = `${cvssScore.toFixed(1)} / 10`;
 
-  // Make a call for the content script to get the probability
-  var probability = await get_feature_data(); 
-  document.getElementById("Ml_score").textContent = probability; 
-
-  if (cvssScore === 0 || probability <= 50) {
+  if (cvssScore === 0) {
     scoreElem.className = "safe";
     statusElem.textContent = "✅ No known vulnerabilities.";
-  } else if (cvssScore > 0 && cvssScore <= 3 || probability <= 55) {
+  } else if (cvssScore > 0 && cvssScore <= 3) {
     scoreElem.className = "low-risk";
     statusElem.textContent = "⚠️ Low risk site. Consider alternatives.";
-
-    const suggestions = await getChatGPTRecommendations(domain);
-    console.log("GPT Suggestions for", domain, ":", suggestions);
-
-    const suggestionsDiv = document.createElement('div');
-    suggestionsDiv.innerHTML = `
-      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
-      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
-
-    `;
-    document.body.appendChild(suggestionsDiv);
-
-  } else if (cvssScore > 3 && cvssScore <= 7 || probability <= 60) {
+  } else if (cvssScore > 3 && cvssScore <= 7) {
     scoreElem.className = "medium-risk";
     statusElem.textContent = "⚠️ Medium risk site. Consider alternatives.";
-
-    const suggestions = await getChatGPTRecommendations(domain);
-    console.log("GPT Suggestions for", domain, ":", suggestions);
-
-    const suggestionsDiv = document.createElement('div');
-    suggestionsDiv.innerHTML = `
-      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
-      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
-
-    `;
-    document.body.appendChild(suggestionsDiv);
-
-  } else if (cvssScore > 7 && cvssScore <= 10 || probability > 65) {
+  } else if (cvssScore > 7 && cvssScore <= 10) {
     scoreElem.className = "high-risk";
     statusElem.textContent = "🚨 High risk site! Safer alternatives recommended.";
+  }
 
-    const suggestions = await getChatGPTRecommendations(domain);
-    console.log("GPT Suggestions for", domain, ":", suggestions);
-
+  if (suggestions) {
     const suggestionsDiv = document.createElement('div');
     suggestionsDiv.innerHTML = `
       <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">Recommended Alternatives:</h4>
       <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
-
     `;
     document.body.appendChild(suggestionsDiv);
   }
-  
-  saveScanResult(domain, probability);
+
+  saveScanResult(domain, cvssScore);
   loadScanHistory();
 });
