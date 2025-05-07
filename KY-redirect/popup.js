@@ -16,10 +16,14 @@ async function getNVDScore(domain) {
   try {
     const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`, {
       headers: {
-        "apiKey": "888a352e-c59e-4a55-8ca3-38a98ff23af9"
+        "apiKey": "6d889317-07c4-463b-86c3-8bed8b89be00"
       }
     });
-
+    console.log(response);
+    if (!response.ok) {
+      console.error(`NVD API error: ${response.status} ${response.statusText}`);
+      return 0;
+    }
     const data = await response.json();
     if (!data.vulnerabilities || data.vulnerabilities.length === 0) return 0;
 
