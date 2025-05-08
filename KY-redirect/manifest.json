@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Phishing Detector (NVD-based)",
+  "name": "Phishing Detector (IPQS-based)",
   "version": "1.0",
   "permissions": [
     "tabs",
@@ -10,8 +10,9 @@
     "identity.email"
   ],
   "host_permissions": [
-    "https://services.nvd.nist.gov/*",
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "https://www.ipqualityscore.com/*",
+    "https://safebrowsing.googleapis.com/*"
   ],
   "background": {
     "service_worker": "background.js"
