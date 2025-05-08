@@ -3,7 +3,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // 1) Put your Malicious URL Scanner API key here.
 //    For production you can load this from chrome.storage instead of hard-coding.
-const IPQS_KEY = "rdOjzzP6q6Am7NMkMxDZ2dlVmdIdfTgE";
+const IPQS_KEY = "l0Q0IKxBvvMsJoeuV03EkycJSuPkwgkg";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 2) Utility: pull the “base” domain (e.g. from sub.example.com → example.com)
@@ -18,7 +18,8 @@ function getBaseDomain(hostname) {
 // 3) Call the IPQS Malicious URL Scanner endpoint for a given URL
 //    Returns { unsafe: bool, phishing: bool, riskScore: 0–100 }
 async function checkIPQS(url) {
-  const endpoint = `https://www.ipqualityscore.com/api/json/url/${IPQS_KEY}/${encodeURIComponent(url)}`;
+  const endpoint =
+    `https://www.ipqualityscore.com/api/json/url/${IPQS_KEY}/${encodeURIComponent(url)}`;
   try {
     const resp = await fetch(endpoint);
     const data = await resp.json();
@@ -31,7 +32,6 @@ async function checkIPQS(url) {
     };
   } catch (err) {
     console.error("IPQS lookup error:", err);
-    // Fail-safe: treat unknown as safe
     return { unsafe: false, phishing: false, riskScore: 0 };
   }
 }

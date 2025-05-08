@@ -8,7 +8,6 @@
     "storage"
   ],
   "host_permissions": [
-    "https://api.openai.com/*",
     "https://www.ipqualityscore.com/*",
     "https://safebrowsing.googleapis.com/*"
   ],

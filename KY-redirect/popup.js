@@ -1,7 +1,6 @@
 // popup.js
 
-const IPQS_KEY = "rdOjzzP6q6Am7NMkMxDZ2dlVmdIdfTgE";
-const OPENAI_API_KEY = "sk-…";  // truncated for brevity
+const IPQS_KEY = "l0Q0IKxBvvMsJoeuV03EkycJSuPkwgkg";
 
 const weights = {
   having_IP_Address: 0.32,
@@ -66,30 +65,9 @@ function get_feature_data() {
       for (const [k,v] of Object.entries(weights)) {
         dot += (f[k] || 0) * v;
       }
-      resolve(Math.round((1/(1+Math.exp(-dot)))*100));
+      resolve(Math.round((1/(1+Math.exp(-dot))) * 100));
     });
   });
-}
-
-async function getChatGPTRecommendations(domain) {
-  const prompt = `If the website "${domain}" is high risk, recommend reputable alternatives.`;
-  try {
-    const r = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }]
-      })
-    });
-    const j = await r.json();
-    return j.choices?.[0]?.message?.content.trim() || "No suggestions.";
-  } catch {
-    return "Unable to fetch suggestions.";
-  }
 }
 
 function saveScanResult(domain, score) {
@@ -101,12 +79,12 @@ function saveScanResult(domain, score) {
   });
 }
 
-function loadScanHistory(order='desc') {
+function loadScanHistory(order = 'desc') {
   chrome.storage.local.get('scanHistory', res => {
     const history = res.scanHistory || [];
     const container = document.getElementById('history');
     container.innerHTML = '';
-    history.sort((a,b) => order==='asc' ? a.score-b.score : b.score-a.score);
+    history.sort((a,b) => order==='asc' ? a.score - b.score : b.score - a.score);
     history.forEach(e => {
       const when = new Date(e.scannedAt).toLocaleTimeString();
       const div = document.createElement('div');
@@ -120,41 +98,44 @@ function loadScanHistory(order='desc') {
 // MAIN
 chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
   if (!tabs.length || !tabs[0].url) return;
-  const url = tabs[0].url;
+  const url    = tabs[0].url;
   const domain = new URL(url).hostname;
-  document.getElementById('domain').textContent = domain;
 
+  document.getElementById('domain').textContent = domain;
   document.getElementById('safety').textContent = await safe_check(url);
   document.getElementById('Ml_score').textContent = `${await get_feature_data()}%`;
 
   const { unsafe, phishing, riskScore } = await getIPQSScore(url);
-  document.getElementById('score').textContent = `${riskScore} / 100`;
+  document.getElementById('score').textContent    = `${riskScore} / 100`;
   document.getElementById('phishing').textContent = phishing ? "Yes" : "No";
 
-  const status = document.getElementById('status');
-  const recs = document.getElementById('recommendations');
-  if (phishing || unsafe || riskScore>=75 || parseInt(document.getElementById('Ml_score').textContent) > 65) {
-    status.textContent = "🚨 High risk! Consider alternatives.";
-    recs.textContent = await getChatGPTRecommendations(domain);
+  const statusEl = document.getElementById('status');
+  const highThreshold = 75;
+  const mlScore = parseInt(document.getElementById('Ml_score').textContent, 10);
+  const isHighRisk = phishing || unsafe || riskScore >= 1 || mlScore > 65;
+
+  if (riskScore >= highThreshold) {
+    statusEl.textContent = "🚨 High risk site!";
+  } else if (isHighRisk) {
+    statusEl.textContent = "⚠️ Some risk indicators detected.";
   } else {
-    status.textContent = "✅ Low risk.";
-    recs.textContent = "";
+    statusEl.textContent = "✅ Low risk.";
   }
 
   saveScanResult(domain, riskScore);
   loadScanHistory();
 });
 
-// Tab switching
-document.getElementById('tab-scan').addEventListener('click', () => {
+// Tab-switching
+document.getElementById('tab-scan').onclick = () => {
   document.getElementById('tab-scan').classList.add('text-blue-600','border-blue-500');
   document.getElementById('tab-history').classList.remove('text-blue-600','border-blue-500');
   document.getElementById('tab-scan-content').classList.remove('hidden');
   document.getElementById('tab-history-content').classList.add('hidden');
-});
-document.getElementById('tab-history').addEventListener('click', () => {
+};
+document.getElementById('tab-history').onclick = () => {
   document.getElementById('tab-history').classList.add('text-blue-600','border-blue-500');
   document.getElementById('tab-scan').classList.remove('text-blue-600','border-blue-500');
   document.getElementById('tab-history-content').classList.remove('hidden');
   document.getElementById('tab-scan-content').classList.add('hidden');
-});
+};
