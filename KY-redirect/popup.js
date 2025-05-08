@@ -1,15 +1,7 @@
 // popup.js
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1) Insert your IPQS key here (or fetch from chrome.storage/env)
 const IPQS_KEY = "rdOjzzP6q6Am7NMkMxDZ2dlVmdIdfTgE";
-const OPENAI_API_KEY = "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";
-
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2) ML Model weights (unchanged)
-let sorted = [];
+const OPENAI_API_KEY = "sk-…";  // truncated for brevity
 
 const weights = {
   having_IP_Address: 0.32,
@@ -25,213 +17,144 @@ const weights = {
   Submitting_to_email: -0.14
 };
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 3) Helper: extract base domain
-function getBaseDomain(hostname) {
-  const parts = hostname.split('.');
-  return parts.length >= 2
-    ? parts.slice(-2).join('.')
-    : hostname;
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4) Google Safe Browsing check (unchanged)
 async function safe_check(url) {
-  const API_KEY = 'AIzaSyC8cknUlHcUJb0NjagV4mfJZ9-0mAxnQEY';
   try {
-    const response = await fetch(
-      `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`,
+    const res = await fetch(
+      `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=AIzaSy…`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           client: { clientId: "yourclient", clientVersion: "1.5.2" },
           threatInfo: {
-            threatTypes:      ["MALWARE","SOCIAL_ENGINEERING"],
-            platformTypes:    ["WINDOWS"],
+            threatTypes: ["MALWARE","SOCIAL_ENGINEERING"],
+            platformTypes: ["WINDOWS"],
             threatEntryTypes: ["URL"],
-            threatEntries:    [{ url }]
+            threatEntries: [{ url }]
           }
         })
       }
     );
-    const data = await response.json();
+    const data = await res.json();
     return data.matches ? "Unsafe" : "Safe";
-  } catch (err) {
-    console.error("Google Safe Browsing error:", err);
+  } catch {
     return "Error";
   }
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 5) IPQS Malicious URL Scanner API call
-//    Returns { unsafe: bool, phishing: bool, riskScore: 0–100 }
 async function getIPQSScore(url) {
-  const endpoint = 
-    `https://www.ipqualityscore.com/api/json/url/${IPQS_KEY}/${encodeURIComponent(url)}`;
   try {
-    const resp = await fetch(endpoint);
-    const data = await resp.json();
+    const res = await fetch(
+      `https://www.ipqualityscore.com/api/json/url/${IPQS_KEY}/${encodeURIComponent(url)}`
+    );
+    const data = await res.json();
     return {
-      unsafe:    !!data.unsafe,
-      phishing:  !!data.phishing,
+      unsafe:   !!data.unsafe,
+      phishing: !!data.phishing,
       riskScore: Number.isFinite(data.risk_score) ? data.risk_score : 0
     };
-  } catch (err) {
-    console.error("IPQS lookup error:", err);
-    // default to safe
+  } catch {
     return { unsafe: false, phishing: false, riskScore: 0 };
   }
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 6) Load feature vector from content script and compute ML probability
 function get_feature_data() {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get("features", (res) => {
+  return new Promise(resolve => {
+    chrome.storage.local.get("features", res => {
       const f = res.features || {};
-      // logistic regression: σ(w·x)
       let dot = 0;
       for (const [k,v] of Object.entries(weights)) {
         dot += (f[k] || 0) * v;
       }
-      const prob = Math.round((1 / (1 + Math.exp(-dot))) * 100);
-      resolve(prob);
+      resolve(Math.round((1/(1+Math.exp(-dot)))*100));
     });
   });
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 7) Get ChatGPT suggestions (unchanged)
 async function getChatGPTRecommendations(domain) {
-  const prompt = `
-If the website "${domain}" has a high vulnerability risk, recommend safe and reputable websites that provide similar services. 
-If you don't recognize the website, recommend general safe websites like Google, Wikipedia, or DuckDuckGo.
-Return them as a list.
-  `;
+  const prompt = `If the website "${domain}" is high risk, recommend reputable alternatives.`;
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }]
       })
     });
-    const json = await response.json();
-    return json.choices?.[0]?.message?.content.trim() 
-      || "No suggestions available.";
-  } catch (err) {
-    console.error("ChatGPT error:", err);
-    return "Error fetching suggestions.";
+    const j = await r.json();
+    return j.choices?.[0]?.message?.content.trim() || "No suggestions.";
+  } catch {
+    return "Unable to fetch suggestions.";
   }
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 8) Save & display scan history (unchanged)
 function saveScanResult(domain, score) {
-  chrome.storage.local.get(['scanHistory'], (res) => {
-    const history = res.scanHistory || [];
-    const filtered = history.filter(e => e.domain !== domain);
+  chrome.storage.local.get('scanHistory', res => {
+    const hist = res.scanHistory || [];
+    const filtered = hist.filter(e => e.domain !== domain);
     filtered.push({ domain, score, scannedAt: Date.now() });
     chrome.storage.local.set({ scanHistory: filtered });
   });
 }
 
-function loadScanHistory(order = 'desc') {
-  chrome.storage.local.get(['scanHistory'], (res) => {
+function loadScanHistory(order='desc') {
+  chrome.storage.local.get('scanHistory', res => {
     const history = res.scanHistory || [];
     const container = document.getElementById('history');
     container.innerHTML = '';
-    history.sort((a,b) => 
-      order === 'asc' ? a.score - b.score : b.score - a.score
-    );
-    for (const entry of history) {
-      const when = new Date(entry.scannedAt).toLocaleTimeString();
-      const el = document.createElement('div');
-      el.className = 'flex justify-between bg-gray-100 p-2 rounded';
-      el.innerHTML = `<span>${entry.domain}</span><span>${entry.score}%</span><span>${when}</span>`;
-      container.appendChild(el);
-    }
+    history.sort((a,b) => order==='asc' ? a.score-b.score : b.score-a.score);
+    history.forEach(e => {
+      const when = new Date(e.scannedAt).toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'flex justify-between bg-gray-100 p-2 rounded';
+      div.innerHTML = `<span>${e.domain}</span><span>${e.score}%</span><span>${when}</span>`;
+      container.appendChild(div);
+    });
   });
 }
 
-// setup sort buttons
-document.getElementById('sort-low')?.addEventListener('click', () => loadScanHistory('asc'));
-document.getElementById('sort-high')?.addEventListener('click', () => loadScanHistory('desc'));
-document.getElementById('clear-history')?.addEventListener('click', () => {
-  chrome.storage.local.set({ scanHistory: [] }, () => loadScanHistory());
-});
+// MAIN
+chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
+  if (!tabs.length || !tabs[0].url) return;
+  const url = tabs[0].url;
+  const domain = new URL(url).hostname;
+  document.getElementById('domain').textContent = domain;
 
+  document.getElementById('safety').textContent = await safe_check(url);
+  document.getElementById('Ml_score').textContent = `${await get_feature_data()}%`;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 9) Main: when popup opens
-chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-  if (!tabs.length) return;
-  const tab = tabs[0];
-  if (!tab.url) return;
+  const { unsafe, phishing, riskScore } = await getIPQSScore(url);
+  document.getElementById('score').textContent = `${riskScore} / 100`;
+  document.getElementById('phishing').textContent = phishing ? "Yes" : "No";
 
-  // Domain display
-  const urlObj = new URL(tab.url);
-  const domain = urlObj.hostname;
-  document.getElementById("domain").textContent = domain;
-
-  // Google Safe Browsing
-  const safety = await safe_check(tab.url);
-  document.getElementById("safety").textContent = safety;
-
-  // ML Model Score
-  const probability = await get_feature_data();
-  document.getElementById("Ml_score").textContent = `${probability}%`;
-
-  // IPQS Risk Score + Phishing flag
-  const { unsafe, phishing, riskScore } = await getIPQSScore(tab.url);
-  document.getElementById("score").textContent    = `${riskScore} / 100`;
-  document.getElementById("phishing").textContent = phishing ? "Yes" : "No";
-
-  // Final status & suggestions
-  const statusElem = document.getElementById("status");
-  // high risk if phishing/unsafe or very high riskScore or ML>65
-  if (phishing || unsafe || riskScore >= 75 || probability > 65) {
-    statusElem.textContent = "🚨 High risk site! Safer alternatives recommended.";
-    const suggestions = await getChatGPTRecommendations(domain);
-    const box = document.createElement("div");
-    box.innerHTML = `
-      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">
-        Recommended Alternatives:
-      </h4>
-      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
-    `;
-    document.body.appendChild(box);
-
-  // medium risk if mid-range riskScore or ML 50–65
-  } else if ((riskScore >= 50 && riskScore < 75) || (probability > 50 && probability <= 65)) {
-    statusElem.textContent = "⚠️ Medium risk site. Consider alternatives.";
-    const suggestions = await getChatGPTRecommendations(domain);
-    const box = document.createElement("div");
-    box.innerHTML = `
-      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">
-        Recommended Alternatives:
-      </h4>
-      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
-    `;
-    document.body.appendChild(box);
-
+  const status = document.getElementById('status');
+  const recs = document.getElementById('recommendations');
+  if (phishing || unsafe || riskScore>=75 || parseInt(document.getElementById('Ml_score').textContent) > 65) {
+    status.textContent = "🚨 High risk! Consider alternatives.";
+    recs.textContent = await getChatGPTRecommendations(domain);
   } else {
-    // low risk
-    statusElem.textContent = "✅ Low risk. Looks safe.";
+    status.textContent = "✅ Low risk.";
+    recs.textContent = "";
   }
 
-  // persist & refresh history
   saveScanResult(domain, riskScore);
   loadScanHistory();
+});
+
+// Tab switching
+document.getElementById('tab-scan').addEventListener('click', () => {
+  document.getElementById('tab-scan').classList.add('text-blue-600','border-blue-500');
+  document.getElementById('tab-history').classList.remove('text-blue-600','border-blue-500');
+  document.getElementById('tab-scan-content').classList.remove('hidden');
+  document.getElementById('tab-history-content').classList.add('hidden');
+});
+document.getElementById('tab-history').addEventListener('click', () => {
+  document.getElementById('tab-history').classList.add('text-blue-600','border-blue-500');
+  document.getElementById('tab-scan').classList.remove('text-blue-600','border-blue-500');
+  document.getElementById('tab-history-content').classList.remove('hidden');
+  document.getElementById('tab-scan-content').classList.add('hidden');
 });
