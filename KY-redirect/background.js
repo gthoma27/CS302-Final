@@ -5,7 +5,6 @@
 //    For production you can load this from chrome.storage instead of hard-coding.
 const IPQS_KEY = "rdOjzzP6q6Am7NMkMxDZ2dlVmdIdfTgE";
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 2) Utility: pull the “base” domain (e.g. from sub.example.com → example.com)
 function getBaseDomain(hostname) {
@@ -14,7 +13,6 @@ function getBaseDomain(hostname) {
     ? parts.slice(-2).join('.')
     : hostname;
 }
-
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 3) Call the IPQS Malicious URL Scanner endpoint for a given URL
@@ -38,35 +36,29 @@ async function checkIPQS(url) {
   }
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 4) When any tab finishes loading, run the IPQS check and set a badge/alert
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (changeInfo.status === "complete" && tab.url && tab.active) {
     checkIPQS(tab.url).then(({ unsafe, phishing, riskScore }) => {
-      // Define your own thresholds:
       const isHighRisk = phishing || unsafe || riskScore >= 75;
 
       if (isHighRisk) {
-        // Inject a page-level alert
         chrome.scripting.executeScript({
           target: { tabId },
           func: () => alert("🚨 Warning: This site may be malicious!")
         });
-        // Show a badge on the toolbar icon
         chrome.action.setBadgeText({ tabId, text: "!" });
         chrome.action.setBadgeBackgroundColor({ tabId, color: "#E53935" });
       } else {
-        // Clear any existing badge
         chrome.action.setBadgeText({ tabId, text: "" });
       }
     });
   }
 });
 
-
 // ─────────────────────────────────────────────────────────────────────────────
-// 5) (Optional) On install, clear badge so you start “clean”
+// 5) On install, clear any badge so you start “clean”
 chrome.runtime.onInstalled.addListener(() => {
   chrome.action.setBadgeText({ text: "" });
 });
