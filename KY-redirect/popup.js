@@ -87,7 +87,6 @@ async function getIPQSScore(url) {
   }
 }
 
-
 // ─────────────────────────────────────────────────────────────────────────────
 // 6) Load feature vector from content script and compute ML probability
 function get_feature_data() {
@@ -138,29 +137,45 @@ Return them as a list.
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 8) Save & display scan history (unchanged)
-function saveScanResult(domain, score) {
+function saveScanResult(domain, ipqsScore, googleScore, mlScore) {
   chrome.storage.local.get(['scanHistory'], (res) => {
     const history = res.scanHistory || [];
     const filtered = history.filter(e => e.domain !== domain);
-    filtered.push({ domain, score, scannedAt: Date.now() });
+    filtered.push({ domain, ipqsScore, googleScore, mlScore, scannedAt: Date.now() });
     chrome.storage.local.set({ scanHistory: filtered });
   });
 }
 
-function loadScanHistory(order = 'desc') {
+function loadScanHistory() {
   chrome.storage.local.get(['scanHistory'], (res) => {
     const history = res.scanHistory || [];
     const container = document.getElementById('history');
     container.innerHTML = '';
-    history.sort((a,b) => 
-      order === 'asc' ? a.score - b.score : b.score - a.score
-    );
+
+    // Get sort method from localStorage or default to 'ipqs'
+    const sortBy = localStorage.getItem('leaderboardSort') || 'ipqs';
+
+    // Sort based on selected method
+    history.sort((a, b) => {
+      if (sortBy === 'ipqs') return (b.ipqsScore ?? 0) - (a.ipqsScore ?? 0);
+      if (sortBy === 'google') return (b.googleScore ?? 0) - (a.googleScore ?? 0);
+      if (sortBy === 'ml') return (b.mlScore ?? 0) - (a.mlScore ?? 0);
+      return 0;
+    });
+
     for (const entry of history) {
       const when = new Date(entry.scannedAt).toLocaleTimeString();
-      const el = document.createElement('div');
-      el.className = 'flex justify-between bg-gray-100 p-2 rounded';
-      el.innerHTML = `<span>${entry.domain}</span><span>${entry.score}%</span><span>${when}</span>`;
-      container.appendChild(el);
+      container.innerHTML += `
+        <div class="flex justify-between bg-gray-100 p-2 rounded">
+          <span>${entry.domain}</span>
+          <span>
+            IPQS: ${entry.ipqsScore ?? '-'} |
+            Google: ${entry.googleScore ?? '-'} |
+            ML: ${entry.mlScore ?? '-'}
+          </span>
+          <span>${when}</span>
+        </div>
+      `;
     }
   });
 }
@@ -172,6 +187,17 @@ document.getElementById('clear-history')?.addEventListener('click', () => {
   chrome.storage.local.set({ scanHistory: [] }, () => loadScanHistory());
 });
 
+// Add leaderboard sort dropdown event handler
+function setupLeaderboardSortDropdown() {
+  const leaderboardSort = document.getElementById('leaderboardSort');
+  if (leaderboardSort) {
+    leaderboardSort.value = localStorage.getItem('leaderboardSort') || 'ipqs';
+    leaderboardSort.addEventListener('change', (e) => {
+      localStorage.setItem('leaderboardSort', e.target.value);
+      loadScanHistory();
+    });
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 9) Main: when popup opens
@@ -232,6 +258,78 @@ chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
   }
 
   // persist & refresh history
-  saveScanResult(domain, riskScore);
+  saveScanResult(domain, riskScore, safety === 'Unsafe' ? 100 : 0, probability);
   loadScanHistory();
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 10) Toggle feature visibility
+function toggleFeature(feature) {
+  const featureMap = {
+    google: "google-container",
+    ipqs: "ipqs-container",
+    ml: "ml-container"
+  };
+
+  const elementId = featureMap[feature];
+  const checkbox = document.getElementById(`toggle${feature.charAt(0).toUpperCase() + feature.slice(1)}`);
+  const element = document.getElementById(elementId);
+
+  if (checkbox) {
+    checkbox.checked = localStorage.getItem(`show_${feature}`) !== "false";
+    element.style.display = localStorage.getItem(`show_${feature}`) !== "false" ? "block" : "none";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Unified feature toggle and tab switching logic
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Map feature names to checkbox and container IDs
+  const features = [
+    { key: "google", checkbox: "toggleGoogle", container: "google-container" },
+    { key: "ipqs",   checkbox: "toggleIPQS",   container: "ipqs-container"   },
+    { key: "ml",     checkbox: "toggleML",     container: "ml-container"     }
+  ];
+
+  // Initialize checkboxes and containers
+  features.forEach(({ key, checkbox, container }) => {
+    const cb = document.getElementById(checkbox);
+    const cont = document.getElementById(container);
+    if (!cb || !cont) return;
+
+    // Set initial state from localStorage (default: true)
+    const isVisible = localStorage.getItem(`show_${key}`) !== "false";
+    cb.checked = isVisible;
+    cont.style.display = isVisible ? "block" : "none";
+
+    // Add event listener
+    cb.addEventListener("change", () => {
+      cont.style.display = cb.checked ? "block" : "none";
+      localStorage.setItem(`show_${key}`, cb.checked ? "true" : "false");
+    });
+  });
+
+  // (Optional) Dark mode toggle
+  document.getElementById("darkToggle")?.addEventListener("change", (event) => {
+    toggleDarkMode(event.target);
+  });
+
+  // Tab switching logic
+  document.getElementById("tab-detector").addEventListener("click", () => {
+    document.getElementById("content-detector").classList.remove("hidden");
+    document.getElementById("content-settings").classList.add("hidden");
+    document.getElementById("tab-detector").classList.add("text-blue-600", "border-b-2", "border-blue-600");
+    document.getElementById("tab-settings").classList.remove("text-blue-600", "border-b-2", "border-blue-600");
+  });
+
+  document.getElementById("tab-settings").addEventListener("click", () => {
+    document.getElementById("content-settings").classList.remove("hidden");
+    document.getElementById("content-detector").classList.add("hidden");
+    document.getElementById("tab-settings").classList.add("text-blue-600", "border-b-2", "border-blue-600");
+    document.getElementById("tab-detector").classList.remove("text-blue-600", "border-b-2", "border-blue-600");
+  });
+
+  // Setup leaderboard sort dropdown
+  setupLeaderboardSortDropdown();
 });
