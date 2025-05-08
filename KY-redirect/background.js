@@ -40,7 +40,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     try {
       const response = await fetch(`https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`, {
         headers: {
-          "apiKey": "888a352e-c59e-4a55-8ca3-38a98ff23af9"  // Optional but recommended
+          "apiKey": "9f2edcdf-9980-47c4-9be3-8a0498032ba0"  // Optional but recommended
         }
       });
       console.log("Fetching URL:", `https://services.nvd.nist.gov/rest/json/cves/2.0?keywordSearch=${keyword}&resultsPerPage=5`);
