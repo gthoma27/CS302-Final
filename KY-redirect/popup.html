@@ -4,10 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Phishing Detector</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <style>
     html, body {
       width: 600px;
@@ -16,58 +13,50 @@
     }
   </style>
 </head>
-<body class="bg-gray-50 text-center text-gray-800 font-serif p-4">
+<body class="bg-gray-100 text-gray-800 font-sans p-6">
 
-  <h1 class="text-3xl font-bold mb-4">Phishing Detector</h1>
+  <div class="max-w-md mx-auto bg-white shadow-lg rounded-lg p-6">
+    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">Phishing Detector</h1>
 
-  <!-- Current URL -->
-  <div class="mb-2">
-    <span class="text-2xl text-gray-600">URL:</span>
-    <span id="domain" class="text-2xl text-gray-900">Loading...</span>
-  </div>
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div>
+        <p class="text-sm text-gray-500">URL</p>
+        <p id="domain" class="text-base font-medium text-gray-800">Loading...</p>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">Phishing Detected</p>
+        <p id="phishing" class="text-base font-semibold text-red-500">-</p>
+      </div>
+    </div>
 
-  <!-- IPQS Risk Score -->
-  <div class="mb-4">
-    <span class="text-2xl text-gray-600">IPQS Risk Score:</span>
-    <span id="score" class="text-5xl font-bold">-</span>
-  </div>
+    <div class="space-y-2 mb-4">
+      <div class = "flex">
+        <div class = "w-1/2">
+          <p class="text-sm text-gray-500">IPQS Risk Score</p>
+          <p id="score" class="text-base font-semibold">-</p>
+        </div>
+        <div class = "w-1/2">
+          <p class="text-sm text-gray-500">Model Score</p>
+          <p id="Ml_score" class="text-base font-semibold">-</p>
+        </div>
+      </div>
+      <div>
+        <p class="text-sm text-gray-500">GoogleAPI Score</p>
+        <p id="safety" class="text-base font-semibold">-</p>
+      </div>
+    </div>
 
-  <!-- Phishing Flag -->
-  <div class="mb-4">
-    <span class="text-2xl text-gray-600">Phishing Detected:</span>
-    <span id="phishing" class="text-5xl font-bold">-</span>
-  </div>
+    <div id="status" class="text-center text-sm text-gray-600 mb-4"></div>
 
-  <!-- Your ML model score -->
-  <div class="mb-4">
-    <span class="text-2xl text-gray-600">Model Score:</span>
-    <span id="Ml_score" class="text-5xl font-bold">-</span>
-  </div>
-
-  <!-- Google Safe Browsing -->
-  <div class="mb-4">
-    <span class="text-2xl text-gray-600">GoogleAPI Score:</span>
-    <span id="safety" class="text-5xl">-</span>
-  </div>
-
-  <!-- Final status message -->
-  <div id="status" class="text-xl text-gray-700 mb-4"></div>
-
-  <!-- Scan history / leaderboard -->
-  <div class="border-t border-gray-300 pt-4 mt-4 text-left">
-    <h3 class="text-2xl font-semibold text-center text-gray-700 mb-2">
-      Phishing Leaderboards
-    </h3>
-    <div
-      id="history"
-      class="text-center space-y-2 max-h-40 overflow-y-auto pr-2"
-    ></div>
-    <button
-      id="clear-history"
-      class="bg-red-500 text-white px-3 py-1 rounded mt-2"
-    >
-      Clear History
-    </button>
+    <div class="border-t pt-4">
+      <h2 class="text-lg font-semibold text-center text-gray-700 mb-2">Phishing Leaderboards</h2>
+      <div id="history" class="bg-gray-50 rounded p-2 text-sm text-gray-700 max-h-32 overflow-y-auto space-y-1 shadow-inner"></div>
+      <div class="flex justify-center mt-3">
+        <button id="clear-history" class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-1 rounded">
+          Clear History
+        </button>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js"></script>
