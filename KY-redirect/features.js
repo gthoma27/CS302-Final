@@ -1,116 +1,62 @@
-// features.js
-// CITATION: Adapted from https://github.com/picopalette/phishing-detection-plugin
+// CITATION: A majority of this code was taken and augmented from
+// https://github.com/picopalette/phishing-detection-plugin/blob/master/frontend/js/features.js
 
+// Set up features object
 var features = {
-  "having_IP_Address": 0,
-  "URL_Length": 0,
-  "having_At_Symbol": 0,
-  "double_slash_redirecting": 0,
-  "Prefix_Suffix": 0,
-  "having_Sub_Domain": 0,
-  "URL_of_Anchor": 0,
-  "HTTPS_token": 0,
-  "SFH": 0,
-  "Links_in_tags": 0,
-  "Submitting_to_email": 0
-};
+    "having_IP_Address": 0,
+    "URL_Length": 0,
+    "having_At_Symbol": 0,
+    "double_slash_redirecting": 0,
+    "Prefix_Suffix": 0,
+    "having_Sub_Domain": 0,
+    "URL_of_Anchor": 0,
+    "HTTPS_token": 0,
+    "SFH": 0,
+    "Links_in_tags": 0,
+    "Submitting_to_email": 0
+  };
 
-var url    = window.location.href;
-var domain = window.location.hostname;
-var bare   = domain.replace('www.', '');
+// Having Ip-Address
 
-// 1) IP address in domain?
-var ipPat  = /\d+\.\d+\.\d+\.\d+/;
-var decPat = /(25[0-5]|2[0-4]\d|1\d\d|\d{1,2})(\.|$){4}/;
-var hexPat = /0x[0-9A-F]+(\.|$){4}/;
-features.having_IP_Address = (ipPat.test(domain) || decPat.test(domain) || hexPat.test(domain)) ? 1 : -1;
+var url = window.location.href; // Grab the current URL
 
-// 2) URL length
-features.URL_Length = url.length < 54 ? -1
-                   : url.length <= 75      ?  0
-                                            :  1;
+var urlDomain = window.location.hostname; // Grab the domain name
 
-// 3) Prefix-suffix (hyphen) in domain
-features.Prefix_Suffix = /-/.test(domain) ? 1 : -1;
+var onlyDomain = urlDomain.replace('www.',''); // Remove the www. from the domain
 
-// 4) Number of subdomains
-var dotCount = (bare.match(/\./g) || []).length;
-features.having_Sub_Domain = dotCount < 2 ? -1
-                         : dotCount === 2 ? 0
-                                          : 1;
+// Ip adress patterns to check for
+var patt = /(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[0-9]?[0-9])(\.|$){4}/;
+var patt2 = /(0x([0-9][0-9]|[A-F][A-F]|[A-F][0-9]|[0-9][A-F]))(\.|$){4}/;
+var ip = /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/;
 
-// 5) “@” symbol in URL
-features.having_At_Symbol = /@/.test(url) ? 1 : -1;
-
-// 6) Redirect (“//” after protocol)
-features.double_slash_redirecting = url.indexOf('//', 8) !== -1 ? 1 : -1;
-
-// 7) Server Form Handler (SFH)
-var forms = document.getElementsByTagName('form');
-var sfhRes = -1;
-for (var i = 0; i < forms.length; i++) {
-  var a = forms[i].getAttribute('action');
-  if (!a || a === '') {
-    sfhRes = 1;
-    break;
-  }
-  if (!(/^\/|^https?:\/\//.test(a))) {
-    sfhRes = 0;
-  }
+// Test if the domain is an ip-adress or matches patterns
+if(ip.test(urlDomain)||patt.test(urlDomain)||patt2.test(urlDomain)){ 
+    features["having_IP_Address"]=1;
+}else{
+    features["having_IP_Address"]=-1;
 }
-features.SFH = sfhRes;
 
-// 8) URL of anchor tags
-var anchors = document.getElementsByTagName('a');
-var phish   = 0, legit = 0;
-for (var i = 0; i < anchors.length; i++) {
-  var h = anchors[i].getAttribute('href');
-  if (!h) continue;
-  if (/^https?:\/\//.test(h) ||
-      (h.charAt(0) === '/' && h.charAt(1) !== '/') ||
-      h.charAt(0) === '#') {
-    legit++;
-  } else {
-    phish++;
-  }
+// URL length
+
+if(url.length<54){ // If the url length is smaller
+    features["URL_Length"]=-1;
+}else if(url.length>=54&&url.length<=75){ // If it is of usual size
+    features["URL_Length"]=0;
+}else{ // If it is very long
+    features["URL_Length"]=1;
 }
-var total = phish + legit;
-var rate  = total ? (phish / total) * 100 : 0;
-features.URL_of_Anchor = rate < 31 ? -1
-                         : rate <= 67 ? 0
-                                      : 1;
 
-// 9) HTTPS token in URL
-features.HTTPS_token = /^https:\/\//.test(url) ? -1 : 1;
+// Prefix_Suffix:            
 
-// 10) Links in <script> and <link> tags
-var scripts = document.getElementsByTagName('script');
-var links   = document.getElementsByTagName('link');
-phish = 0; legit = 0;
-[...scripts, ...links].forEach(el => {
-  var src = el.src || el.getAttribute('href');
-  if (!src) return;
-  if (/^https?:\/\//.test(src) || (src.charAt(0) === '/' && src.charAt(1) !== '/')) {
-    legit++;
-  } else {
-    phish++;
-  }
-});
-total = phish + legit;
-rate  = total ? (phish / total) * 100 : 0;
-features.Links_in_tags = rate < 17   ? -1
-                       : rate <= 81   ?  0
-                                      :  1;
+patt=/-/;
 
-// 11) Submitting to email (mailto:)
-var mailRes = -1;
-for (var i = 0; i < forms.length; i++) {
-  var act = forms[i].getAttribute('action') || '';
-  if (act.startsWith('mailto:')) {
-    mailRes = 1;
-    break;
-  }
+// Test the domain to see if there is a hyphen
+if(patt.test(urlDomain)){ 
+    features["Prefix_Suffix"]=1;
+}else{
+    features["Prefix_Suffix"]=-1;
 }
+<<<<<<< HEAD
 // 12) Favicon from external domain
 let faviconMatch = document.querySelector("link[rel*='icon']");
 if (faviconMatch && faviconMatch.href) {
@@ -155,6 +101,175 @@ features.Email_In_Body = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(document.
 features.Suspicious_Keywords = /(confirm|verify|login|bank|password|account)/i.test(document.body.innerText) ? 1 : -1;
 
 features.Submitting_to_email = mailRes;
+=======
+>>>>>>> dadc630d63949eaf70f87832757f054097f38401
 
-// Persist the feature vector for popup.js to read:
-chrome.storage.local.set({ features });
+// having_Sub_Domain:          
+
+// Checks the number of sub_domains by counting the dots
+if((onlyDomain.match(RegExp('\\.','g'))||[]).length==1){ 
+    features["having_Sub_Domain"]=-1;
+}else if((onlyDomain.match(RegExp('\\.','g'))||[]).length==2){ 
+    result["No. of Sub Domains"]=0;    
+}else{
+    features["having_Sub_Domain"]=1;
+}
+
+//  having_At_Symbol:             
+
+// Test and see if there is a @ in the url
+patt=/@/;
+if(patt.test(url)){ 
+    features["@ Symbol"]=1;
+}else{
+    features["@ Symbol"]=-1;
+}
+
+// double_slash_redirecting: 
+
+// Checks if there is a double slash // in Url ahead of the https// start
+if(url.lastIndexOf("//")>7){
+    features["Redirecting using //"]=1;
+}else{
+    features["Redirecting using //"]=-1;
+}
+
+// SFH - Server form Handler
+
+// grabs the form from the page
+var forms = document.getElementsByTagName("form");
+var res = -1; // start at -1 by default
+
+for(var i = 0; i < forms.length; i++) {
+    var action = forms[i].getAttribute("action");
+    if(!action || action == "") { // If the form has no action
+        res = 1; 
+        break;
+    } else if(!(action.charAt(0)=="/" || patt.test(action))) {
+        res = "0";
+    }
+}
+features["SFH"] = res;
+
+// URL_OF_ANCHOR
+
+// Grab all achor tags
+var aTags = document.getElementsByTagName("a");
+
+phishCount=0;
+legitCount=0;
+var allhrefs="";
+
+for(var i = 0; i < aTags.length; i++){ // Loop through the anchor tabs
+    
+    // grab the link destination from the anchor, and make sure it isnt undefined
+    var hrefs = aTags[i].getAttribute("href");
+    if(!hrefs) continue;
+
+    allhrefs+=hrefs+"       ";
+    if(patt.test(hrefs)){
+        legitCount++;
+    }else if(hrefs.charAt(0)=='#'||(hrefs.charAt(0)=='/'&&hrefs.charAt(1)!='/')){ 
+        legitCount++;
+    }else{ // Phishing sites often have tags to external sites
+        phishCount++;
+    }
+}
+
+// Find the proportion of phish anchors to legit ones
+totalCount=phishCount+legitCount;
+outRequest=(phishCount/totalCount)*100;
+
+// Depending on the proportion, It should be flagged accordingly as a feature
+if(outRequest<31){
+    features["Anchor"]=-1;
+}else if(outRequest>=31&&outRequest<=67){
+    result["Anchor"]=0;
+}else{
+    features["Anchor"]=1;
+}
+
+// HTTPS token
+
+patt=/https:\/\//;
+
+// Checks if the https is declared unusually 
+if(patt.test(url)){
+    features["HTTPS_token"]=-1;
+}else{
+    features["HTTPS_token"]=1;
+}
+
+
+// Links in tags
+
+// Grab the script and link tags
+var sTags = document.getElementsByTagName("script");
+var lTags = document.getElementsByTagName("link");
+
+phishCount=0;
+legitCount=0;
+
+allhrefs="sTags  ";
+
+// For script tags
+for(var i = 0; i < sTags.length; i++){
+    var sTag = sTags[i].getAttribute("src"); // More undefined checks
+    if(sTag!=null){ 
+        allhrefs+=sTag+"      ";
+        if(patt.test(sTag)){ // Checks if the tag is a regular https:// url
+            legitCount++;
+        }else if(sTag.charAt(0)=='/'&&sTag.charAt(1)!='/'){ // Checks for single slash tags, which are usually indicate it is on the same domain
+            legitCount++;                                   // Double slashes can be risky
+        }else{ 
+            phishCount++;
+        }
+    }
+}
+
+// For link tags, Does the same as the s tags
+allhrefs+="      lTags   ";
+for(var i = 0; i < lTags.length; i++){
+    var lTag = lTags[i].getAttribute("href");
+    if(!lTag) continue;
+    allhrefs+=lTag+"       ";
+    if(patt.test(lTag)){
+        legitCount++;
+    }else if(lTag.charAt(0)=='/'&&lTag.charAt(1)!='/'){
+        legitCount++;
+    }else{
+        phishCount++;
+    }
+}
+
+// Checks the proportions of legit and phish tags, similar to how anchor tags does it
+totalCount=phishCount+legitCount;
+outRequest=(phishCount/totalCount)*100;
+
+if(outRequest<17){
+    features["Links_in_tags"]=-1;
+}else if(outRequest>=17&&outRequest<=81){
+    features["Links_in_tags"]=0;
+}else{
+    features["Links_in_tags"]=1;
+}
+
+// Submitting to email
+
+// Grab all forms on page
+var forms = document.getElementsByTagName("form");
+var res = -1;
+
+for(var i = 0; i < forms.length; i++) {
+    var action = forms[i].getAttribute("action");
+    if(!action) continue;
+    if(action.startsWith("mailto")) { // If the forms sends data through email
+        res = 1;
+        break;
+    }
+}
+features["Submitting_to_email"] = res;
+
+
+// Add to local storage so it can be accessed in the popup.js file
+chrome.storage.local.set({features});

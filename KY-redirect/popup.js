@@ -1,6 +1,6 @@
 const IPQS_KEY = "l0Q0IKxBvvMsJoeuV03EkycJSuPkwgkg";
 
-const weights = {
+const weights = { // These are the weights for the following features calculated in the jupiter notebook
   having_IP_Address: 0.32,
   URL_Length: 0.01,
   having_At_Symbol: 0.18,
@@ -24,6 +24,7 @@ const weights = {
   Suspicious_Keywords: 1.3
 };
 
+<<<<<<< HEAD
 // Fetch Google Safe Browsing result
 async function safe_check(url) {
   try {
@@ -47,7 +48,55 @@ async function safe_check(url) {
     return data.matches ? "Unsafe" : "Safe";
   } catch {
     return "Error";
+=======
+async function safe_check(url){
+
+  const API_KEY = 'AIzaSyC8cknUlHcUJb0NjagV4mfJZ9-0mAxnQEY';
+
+  // Test site that should work: 'http://malware.testing.google.test/testing/malware/'
+
+  // Make a http post request to google url site
+  try {
+    const response = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      // POST requests are usually inputted in JSON formatt
+      body: JSON.stringify({
+        // Proper Payload format documented on googles website : https://developers.google.com/safe-browsing/v4/lookup-api
+        "client": {
+          "clientId":      "CS_TEST",
+          "clientVersion": "1.5.2"
+        },
+        "threatInfo": {
+          "threatTypes":      ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+          "platformTypes":    ["ANY_PLATFORM"],
+          "threatEntryTypes": ["URL"],
+          "threatEntries": [
+            {"url": url}   // Url to be inputted
+      ]
+    }
+
+
+      })
+    });
+
+    // Grab data from response
+    const data = await response.json();
+
+    // Check if the data.matches object is established
+    if (data && data.matches) {
+      return "Site is not Safe!"
+    } else { // If not, the site was not found or was not listed as unsafe
+      return "Site is not documented";
+    }
+  } catch (error) { // Possible HTTP error
+    console.error('HTTP Post Error', error);
+    return "Error Using API";
+>>>>>>> dadc630d63949eaf70f87832757f054097f38401
   }
+
 }
 
 // Fetch IPQS phishing risk score
@@ -69,15 +118,28 @@ async function getIPQSScore(url) {
 
 // Compute ML score from feature weights
 function get_feature_data() {
+  // Have to create a promise in order to handle asynchronous Calls
+  // Resolve means the call is successful, reject means there was a error
   return new Promise(resolve => {
     chrome.storage.local.get("features", res => {
+      // Grab the features and calculate the Probability with a sigmoid function
       const f = res.features || {};
+<<<<<<< HEAD
       let dot = 0;
       for (const [k, v] of Object.entries(weights)) {
         dot += (f[k] || 0) * v;
       }
       const score = Math.round((1 / (1 + Math.exp(-dot))) * 100);
       resolve({ score, features: f });
+=======
+
+      let dot = 4.50696702; // Intercept, found in Jupiter notebook
+      for (const [k,v] of Object.entries(weights)) {
+        dot += (f[k] || 0) * v;
+      }
+      // Properly round the result and resolve the promise
+      resolve(Math.round((1/(1+Math.exp(-dot))) * 100));
+>>>>>>> dadc630d63949eaf70f87832757f054097f38401
     });
   });
 }
