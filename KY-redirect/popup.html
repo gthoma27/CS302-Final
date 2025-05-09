@@ -15,6 +15,33 @@
     .hidden { display: none; }
     .transition-all { transition: all 0.3s ease; }
   </style>
+  <style>
+  :root {
+    --bg-color: white;
+    --text-color: black;
+  }
+
+  body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    transition: background 0.3s, color 0.3s;
+  }
+
+  body.dark {
+    --bg-color: #1a202c;
+    --text-color: #e2e8f0;
+  }
+
+  .toggle-btn {
+    cursor: pointer;
+    background: #ddd;
+    padding: 6px 10px;
+    border-radius: 5px;
+    margin-top: 5px;
+    display: inline-block;
+  }
+</style>
+
 </head>
 <body class="font-sans p-5 text-gray-800 transition-all" id="body">
 
@@ -51,6 +78,17 @@
       </div>
       <div class="bg-white rounded-xl shadow p-4">
         <p class="text-sm text-gray-500">ML Model Score</p>
+<!-- ML Progress Bar -->
+<div class="w-full bg-gray-200 rounded-full h-4 mt-2 mb-4">
+  <div id="ml-progress" class="h-4 bg-green-500 text-white text-xs text-center p-1" style="width: 0%">0%</div>
+</div>
+
+<!-- Feature Breakdown -->
+<div class="bg-white rounded-xl shadow p-4 mb-4">
+  <h3 class="text-md font-semibold mb-2 text-center">🧠 Feature Breakdown</h3>
+  <div id="feature-breakdown" class="text-xs"></div>
+</div>
+
         <p id="Ml_score" class="text-3xl font-bold text-indigo-600">-</p>
       </div>
       <div class="bg-white rounded-xl shadow p-4">
@@ -109,16 +147,40 @@
   <script src="popup.js"></script>
 
   <!-- Dark Mode Toggle Script -->
-  <script>
-    document.getElementById('dark-toggle').onclick = () => {
-      const body = document.getElementById('body');
-      body.classList.toggle('bg-gray-900');
-      body.classList.toggle('text-white');
+ <script>
+  // DARK MODE TOGGLE
+  const darkToggleBtn = document.getElementById('dark-toggle');
+  const body = document.getElementById('body');
+
+  function applyDarkModeClasses(isDark) {
+    if (isDark) {
+      body.classList.add('bg-gray-900', 'text-white');
       document.querySelectorAll('.bg-white').forEach(el => {
-        el.classList.toggle('bg-gray-800');
-        el.classList.toggle('text-white');
+        el.classList.remove('bg-white');
+        el.classList.add('bg-gray-800', 'text-white');
       });
-    };
-  </script>
+    } else {
+      body.classList.remove('bg-gray-900', 'text-white');
+      document.querySelectorAll('.bg-gray-800').forEach(el => {
+        el.classList.remove('bg-gray-800', 'text-white');
+        el.classList.add('bg-white');
+      });
+    }
+  }
+
+  // Load dark mode setting
+  chrome.storage.local.get(['darkMode'], (res) => {
+    applyDarkModeClasses(res.darkMode);
+  });
+
+  // Toggle and save
+  darkToggleBtn.addEventListener('click', () => {
+    const isCurrentlyDark = body.classList.contains('bg-gray-900');
+    const newSetting = !isCurrentlyDark;
+    applyDarkModeClasses(newSetting);
+    chrome.storage.local.set({ darkMode: newSetting });
+  });
+</script>
+
 </body>
 </html>
