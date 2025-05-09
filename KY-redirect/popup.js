@@ -1,17 +1,8 @@
 // popup.js
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1) Insert your IPQS key here (or fetch from chrome.storage/env)
-const IPQS_KEY = "rdOjzzP6q6Am7NMkMxDZ2dlVmdIdfTgE";
-const OPENAI_API_KEY = "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";
+const IPQS_KEY = "l0Q0IKxBvvMsJoeuV03EkycJSuPkwgkg";
 
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 2) ML Model weights (unchanged)
-let sorted = [];
-
-const weights = {
+const weights = { // These are the weights for the following features calculated in the jupiter notebook
   having_IP_Address: 0.32,
   URL_Length:        0.01,
   having_At_Symbol:  0.18,
@@ -25,85 +16,95 @@ const weights = {
   Submitting_to_email: -0.14
 };
 
+async function safe_check(url){
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3) Helper: extract base domain
-function getBaseDomain(hostname) {
-  const parts = hostname.split('.');
-  return parts.length >= 2
-    ? parts.slice(-2).join('.')
-    : hostname;
-}
-
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 4) Google Safe Browsing check (unchanged)
-async function safe_check(url) {
   const API_KEY = 'AIzaSyC8cknUlHcUJb0NjagV4mfJZ9-0mAxnQEY';
+
+  // Test site that should work: 'http://malware.testing.google.test/testing/malware/'
+
+  // Make a http post request to google url site
   try {
-    const response = await fetch(
-      `https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client: { clientId: "yourclient", clientVersion: "1.5.2" },
-          threatInfo: {
-            threatTypes:      ["MALWARE","SOCIAL_ENGINEERING"],
-            platformTypes:    ["WINDOWS"],
-            threatEntryTypes: ["URL"],
-            threatEntries:    [{ url }]
-          }
-        })
-      }
-    );
+    const response = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      // POST requests are usually inputted in JSON formatt
+      body: JSON.stringify({
+        // Proper Payload format documented on googles website : https://developers.google.com/safe-browsing/v4/lookup-api
+        "client": {
+          "clientId":      "CS_TEST",
+          "clientVersion": "1.5.2"
+        },
+        "threatInfo": {
+          "threatTypes":      ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
+          "platformTypes":    ["ANY_PLATFORM"],
+          "threatEntryTypes": ["URL"],
+          "threatEntries": [
+            {"url": url}   // Url to be inputted
+      ]
+    }
+
+
+      })
+    });
+
+    // Grab data from response
     const data = await response.json();
-    return data.matches ? "Unsafe" : "Safe";
-  } catch (err) {
-    console.error("Google Safe Browsing error:", err);
-    return "Error";
+
+    // Check if the data.matches object is established
+    if (data && data.matches) {
+      return "Site is not Safe!"
+    } else { // If not, the site was not found or was not listed as unsafe
+      return "Site is not documented";
+    }
+  } catch (error) { // Possible HTTP error
+    console.error('HTTP Post Error', error);
+    return "Error Using API";
   }
+
 }
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 5) IPQS Malicious URL Scanner API call
-//    Returns { unsafe: bool, phishing: bool, riskScore: 0–100 }
 async function getIPQSScore(url) {
-  const endpoint = 
-    `https://www.ipqualityscore.com/api/json/url/${IPQS_KEY}/${encodeURIComponent(url)}`;
   try {
-    const resp = await fetch(endpoint);
-    const data = await resp.json();
+    const res = await fetch(
+      `https://www.ipqualityscore.com/api/json/url/${IPQS_KEY}/${encodeURIComponent(url)}`
+    );
+    const data = await res.json();
     return {
-      unsafe:    !!data.unsafe,
-      phishing:  !!data.phishing,
+      unsafe:   !!data.unsafe,
+      phishing: !!data.phishing,
       riskScore: Number.isFinite(data.risk_score) ? data.risk_score : 0
     };
-  } catch (err) {
-    console.error("IPQS lookup error:", err);
-    // default to safe
+  } catch {
     return { unsafe: false, phishing: false, riskScore: 0 };
   }
 }
 
+<<<<<<< HEAD
 // ─────────────────────────────────────────────────────────────────────────────
 // 6) Load feature vector from content script and compute ML probability
+=======
+>>>>>>> main
 function get_feature_data() {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get("features", (res) => {
+  // Have to create a promise in order to handle asynchronous Calls
+  // Resolve means the call is successful, reject means there was a error
+  return new Promise(resolve => {
+    chrome.storage.local.get("features", res => {
+      // Grab the features and calculate the Probability with a sigmoid function
       const f = res.features || {};
-      // logistic regression: σ(w·x)
-      let dot = 0;
+
+      let dot = 4.50696702; // Intercept, found in Jupiter notebook
       for (const [k,v] of Object.entries(weights)) {
         dot += (f[k] || 0) * v;
       }
-      const prob = Math.round((1 / (1 + Math.exp(-dot))) * 100);
-      resolve(prob);
+      // Properly round the result and resolve the promise
+      resolve(Math.round((1/(1+Math.exp(-dot))) * 100));
     });
   });
 }
 
+<<<<<<< HEAD
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 7) Get ChatGPT suggestions (unchanged)
@@ -142,10 +143,18 @@ function saveScanResult(domain, ipqsScore, googleScore, mlScore) {
     const history = res.scanHistory || [];
     const filtered = history.filter(e => e.domain !== domain);
     filtered.push({ domain, ipqsScore, googleScore, mlScore, scannedAt: Date.now() });
+=======
+function saveScanResult(domain, score) {
+  chrome.storage.local.get('scanHistory', res => {
+    const hist = res.scanHistory || [];
+    const filtered = hist.filter(e => e.domain !== domain);
+    filtered.push({ domain, score, scannedAt: Date.now() });
+>>>>>>> main
     chrome.storage.local.set({ scanHistory: filtered });
   });
 }
 
+<<<<<<< HEAD
 function loadScanHistory() {
   chrome.storage.local.get(['scanHistory'], (res) => {
     const history = res.scanHistory || [];
@@ -177,16 +186,31 @@ function loadScanHistory() {
         </div>
       `;
     }
+=======
+function loadScanHistory(order = 'desc') {
+  chrome.storage.local.get('scanHistory', res => {
+    const history = res.scanHistory || [];
+    const container = document.getElementById('history');
+    container.innerHTML = '';
+    history.sort((a,b) => order==='asc' ? a.score - b.score : b.score - a.score);
+    history.forEach(e => {
+      const when = new Date(e.scannedAt).toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = 'flex justify-between bg-gray-100 p-2 rounded';
+      div.innerHTML = `<span>${e.domain}</span><span>${e.score}%</span><span>${when}</span>`;
+      container.appendChild(div);
+    });
+>>>>>>> main
   });
 }
 
-// setup sort buttons
-document.getElementById('sort-low')?.addEventListener('click', () => loadScanHistory('asc'));
-document.getElementById('sort-high')?.addEventListener('click', () => loadScanHistory('desc'));
-document.getElementById('clear-history')?.addEventListener('click', () => {
-  chrome.storage.local.set({ scanHistory: [] }, () => loadScanHistory());
-});
+// MAIN
+chrome.tabs.query({ active: true, currentWindow: true }, async tabs => {
+  if (!tabs.length || !tabs[0].url) return;
+  const url    = tabs[0].url;
+  const domain = new URL(url).hostname;
 
+<<<<<<< HEAD
 // Add leaderboard sort dropdown event handler
 function setupLeaderboardSortDropdown() {
   const leaderboardSort = document.getElementById('leaderboardSort');
@@ -198,65 +222,30 @@ function setupLeaderboardSortDropdown() {
     });
   }
 }
+=======
+  document.getElementById('domain').textContent = domain;
+  document.getElementById('safety').textContent = await safe_check(url);
+  document.getElementById('Ml_score').textContent = `${await get_feature_data()}%`;
+>>>>>>> main
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 9) Main: when popup opens
-chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-  if (!tabs.length) return;
-  const tab = tabs[0];
-  if (!tab.url) return;
+  const { unsafe, phishing, riskScore } = await getIPQSScore(url);
+  document.getElementById('score').textContent    = `${riskScore} / 100`;
+  document.getElementById('phishing').textContent = phishing ? "Yes" : "No";
 
-  // Domain display
-  const urlObj = new URL(tab.url);
-  const domain = urlObj.hostname;
-  document.getElementById("domain").textContent = domain;
+  const statusEl = document.getElementById('status');
+  const highThreshold = 75;
+  const mlScore = parseInt(document.getElementById('Ml_score').textContent, 10);
+  const isHighRisk = phishing || unsafe || riskScore >= 1 || mlScore > 65;
 
-  // Google Safe Browsing
-  const safety = await safe_check(tab.url);
-  document.getElementById("safety").textContent = safety;
-
-  // ML Model Score
-  const probability = await get_feature_data();
-  document.getElementById("Ml_score").textContent = `${probability}%`;
-
-  // IPQS Risk Score + Phishing flag
-  const { unsafe, phishing, riskScore } = await getIPQSScore(tab.url);
-  document.getElementById("score").textContent    = `${riskScore} / 100`;
-  document.getElementById("phishing").textContent = phishing ? "Yes" : "No";
-
-  // Final status & suggestions
-  const statusElem = document.getElementById("status");
-  // high risk if phishing/unsafe or very high riskScore or ML>65
-  if (phishing || unsafe || riskScore >= 75 || probability > 65) {
-    statusElem.textContent = "🚨 High risk site! Safer alternatives recommended.";
-    const suggestions = await getChatGPTRecommendations(domain);
-    const box = document.createElement("div");
-    box.innerHTML = `
-      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">
-        Recommended Alternatives:
-      </h4>
-      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
-    `;
-    document.body.appendChild(box);
-
-  // medium risk if mid-range riskScore or ML 50–65
-  } else if ((riskScore >= 50 && riskScore < 75) || (probability > 50 && probability <= 65)) {
-    statusElem.textContent = "⚠️ Medium risk site. Consider alternatives.";
-    const suggestions = await getChatGPTRecommendations(domain);
-    const box = document.createElement("div");
-    box.innerHTML = `
-      <h4 class="text-xl font-semibold text-gray-700 mt-4 mb-2">
-        Recommended Alternatives:
-      </h4>
-      <p class="text-gray-600 whitespace-pre-line">${suggestions}</p>
-    `;
-    document.body.appendChild(box);
-
+  if (riskScore >= highThreshold) {
+    statusEl.textContent = "🚨 High risk site!";
+  } else if (isHighRisk) {
+    statusEl.textContent = "⚠️ Some risk indicators detected.";
   } else {
-    // low risk
-    statusElem.textContent = "✅ Low risk. Looks safe.";
+    statusEl.textContent = "✅ Low risk.";
   }
 
+<<<<<<< HEAD
   // persist & refresh history
   saveScanResult(domain, riskScore, safety === 'Unsafe' ? 100 : 0, probability);
   loadScanHistory();
@@ -333,3 +322,22 @@ document.addEventListener("DOMContentLoaded", () => {
   // Setup leaderboard sort dropdown
   setupLeaderboardSortDropdown();
 });
+=======
+  saveScanResult(domain, riskScore);
+  loadScanHistory();
+});
+
+// Tab-switching
+document.getElementById('tab-scan').onclick = () => {
+  document.getElementById('tab-scan').classList.add('text-blue-600','border-blue-500');
+  document.getElementById('tab-history').classList.remove('text-blue-600','border-blue-500');
+  document.getElementById('tab-scan-content').classList.remove('hidden');
+  document.getElementById('tab-history-content').classList.add('hidden');
+};
+document.getElementById('tab-history').onclick = () => {
+  document.getElementById('tab-history').classList.add('text-blue-600','border-blue-500');
+  document.getElementById('tab-scan').classList.remove('text-blue-600','border-blue-500');
+  document.getElementById('tab-history-content').classList.remove('hidden');
+  document.getElementById('tab-scan-content').classList.add('hidden');
+};
+>>>>>>> main

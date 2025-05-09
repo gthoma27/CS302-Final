@@ -5,12 +5,9 @@
   "permissions": [
     "tabs",
     "scripting",
-    "storage",
-    "identity",
-    "identity.email"
+    "storage"
   ],
   "host_permissions": [
-    "https://api.openai.com/*",
     "https://www.ipqualityscore.com/*",
     "https://safebrowsing.googleapis.com/*"
   ],
@@ -21,8 +18,10 @@
     "default_popup": "popup.html",
     "default_icon": "icon.png"
   },
-  "content_scripts": [{
-      "matches": ["http://*/*","https://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
       "js": ["features.js"]
-  }]
+    }
+  ]
 }

@@ -91,7 +91,7 @@ if(url.lastIndexOf("//")>7){
 
 // grabs the form from the page
 var forms = document.getElementsByTagName("form");
-var res = -1; // start at -1
+var res = -1; // start at -1 by default
 
 for(var i = 0; i < forms.length; i++) {
     var action = forms[i].getAttribute("action");
