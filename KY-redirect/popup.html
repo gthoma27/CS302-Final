@@ -8,179 +8,63 @@
   <style>
     html, body {
       width: 600px;
-      height: 600px;
-      background-color: #f9fafb;
+      height: 500px;
+      background: #f9fafb;
       overflow-y: auto;
     }
     .hidden { display: none; }
-    .transition-all { transition: all 0.3s ease; }
   </style>
-  <style>
-  :root {
-    --bg-color: white;
-    --text-color: black;
-  }
-
-  body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    transition: background 0.3s, color 0.3s;
-  }
-
-  body.dark {
-    --bg-color: #1a202c;
-    --text-color: #e2e8f0;
-  }
-
-  .toggle-btn {
-    cursor: pointer;
-    background: #ddd;
-    padding: 6px 10px;
-    border-radius: 5px;
-    margin-top: 5px;
-    display: inline-block;
-  }
-</style>
-
 </head>
-<body class="font-sans p-5 text-gray-800 transition-all" id="body">
+<body class="font-sans p-5 text-gray-800">
+  <h1 class="text-3xl font-bold text-center mb-5">Phishing Detector</h1>
 
-  <!-- Header -->
-  <div class="flex items-center justify-between mb-5">
-    <h1 class="text-3xl font-bold text-gray-800">Phishing Detector</h1>
-    <button id="dark-toggle" class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">🌙 Dark Mode</button>
+  <div class="flex justify-center space-x-4 mb-5">
+    <button id="tab-scan" class="px-4 py-2 border-b-2 font-semibold text-blue-600 border-blue-500">Scan Result</button>
+    <button id="tab-history" class="px-4 py-2 border-b-2 font-semibold text-gray-600 border-transparent">Leaderboard</button>
   </div>
 
-  <!-- Navigation Tabs -->
-  <div class="flex justify-center space-x-6 mb-6">
-    <button id="tab-scan" class="px-4 py-2 border-b-2 font-semibold text-blue-600 border-blue-500">Scan</button>
-    <button id="tab-history" class="px-4 py-2 border-b-2 font-semibold text-gray-500 border-transparent">Leaderboard</button>
-  </div>
-
-  <!-- Scan Content -->
+  <!-- Scan Result Tab -->
   <div id="tab-scan-content">
-
-    <!-- Domain Info -->
     <div class="bg-white rounded-xl shadow p-4 mb-4">
-      <p class="text-xs text-gray-500 mb-1">Scanned Domain:</p>
-      <p id="domain" class="text-lg font-semibold text-gray-700 truncate"></p>
+      <p class="text-sm text-gray-500">Domain:</p>
+      <p id="domain" class="text-lg font-semibold"></p>
     </div>
 
-    <!-- Risk Summary -->
-    <div class="grid grid-cols-2 gap-4 mb-4">
+    <div class="grid grid-cols-2 gap-4">
       <div class="bg-white rounded-xl shadow p-4">
         <p class="text-sm text-gray-500">IPQS Risk Score</p>
         <p id="score" class="text-3xl font-bold text-red-600">-</p>
       </div>
       <div class="bg-white rounded-xl shadow p-4">
         <p class="text-sm text-gray-500">Phishing Detected</p>
-        <p id="phishing" class="text-3xl font-bold text-yellow-600">-</p>
+        <p id="phishing" class="text-3xl font-bold">-</p>
       </div>
       <div class="bg-white rounded-xl shadow p-4">
-        <p class="text-sm text-gray-500">ML Model Score</p>
-<!-- ML Progress Bar -->
-<div class="w-full bg-gray-200 rounded-full h-4 mt-2 mb-4">
-  <div id="ml-progress" class="h-4 bg-green-500 text-white text-xs text-center p-1" style="width: 0%">0%</div>
-</div>
-
-<!-- Feature Breakdown -->
-<div class="bg-white rounded-xl shadow p-4 mb-4">
-  <h3 class="text-md font-semibold mb-2 text-center">🧠 Feature Breakdown</h3>
-  <div id="feature-breakdown" class="text-xs"></div>
-</div>
-
-        <p id="Ml_score" class="text-3xl font-bold text-indigo-600">-</p>
+        <p class="text-sm text-gray-500">Model Score</p>
+        <p id="Ml_score" class="text-3xl font-bold">-</p>
       </div>
       <div class="bg-white rounded-xl shadow p-4">
         <p class="text-sm text-gray-500">Google Safe Browsing</p>
-        <p id="safety" class="text-3xl font-bold text-green-600">-</p>
+        <p id="safety" class="text-3xl font-bold">-</p>
       </div>
     </div>
 
-    <!-- Risk Indicator -->
-    <div class="bg-white rounded-xl shadow p-4 mb-4">
-      <div id="status" class="text-lg font-semibold text-center text-gray-800">Checking...</div>
-      <div class="mt-2 flex justify-center">
-        <span id="status-badge" class="text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded-full">Pending</span>
-      </div>
-    </div>
-
-    <!-- Features Breakdown -->
-    <div class="bg-white rounded-xl shadow p-4 mb-4">
-      <details class="text-sm">
-        <summary class="cursor-pointer font-semibold mb-2 text-blue-600">🔍 Model Features Breakdown</summary>
-        <ul class="list-disc pl-5 space-y-1 mt-2 text-gray-600">
-          <li><b>IP Address in URL</b>: Weighted as high risk.</li>
-          <li><b>Long URL</b>: Slight indicator of phishing.</li>
-          <li><b>“@” Symbol in URL</b>: Strong indicator.</li>
-          <li><b>Prefix/Suffix in Domain</b>: Strong signal (e.g. “-secure-”).</li>
-          <li><b>Anchor Tags Linking Outside</b>: Sign of manipulation.</li>
-          <li><b>HTTPS Token Misuse</b>: Negative weight.</li>
-          <li><b>Email Submission</b>: Strong phishing clue.</li>
-        </ul>
-      </details>
-    </div>
-
-    <!-- Summary Panel -->
-    <div class="bg-white rounded-xl shadow p-4">
-      <h3 class="text-lg font-semibold mb-1 text-center">Scan Summary</h3>
-      <ul class="text-sm text-gray-700 mt-2">
-        <li>✅ Trusted domains likely have low scores.</li>
-        <li>⚠️ Medium scores suggest caution is advised.</li>
-        <li>🚨 High scores or phishing tags = block immediately.</li>
-      </ul>
+    <div class="mt-4 bg-white rounded-xl shadow p-4">
+      <p id="status" class="text-center text-lg font-medium"></p>
     </div>
   </div>
 
-  <!-- History Leaderboard -->
+  <!-- History Tab -->
   <div id="tab-history-content" class="hidden">
     <div class="bg-white rounded-xl shadow p-4 mb-4">
-      <h2 class="text-xl font-semibold text-center text-gray-800 mb-4">Recent Scans</h2>
-      <div id="history" class="max-h-48 overflow-y-auto space-y-2 text-sm"></div>
+      <h2 class="text-xl font-semibold text-center mb-3">Phishing Leaderboard</h2>
+      <div id="history" class="space-y-2 max-h-52 overflow-y-auto pr-2 text-sm"></div>
       <div class="text-center mt-4">
-        <button id="clear-history" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">🗑️ Clear History</button>
+        <button id="clear-history" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Clear History</button>
       </div>
     </div>
   </div>
 
-  <!-- JS -->
   <script src="popup.js"></script>
-
-  <!-- Dark Mode Toggle Script -->
- <script>
-  // DARK MODE TOGGLE
-  const darkToggleBtn = document.getElementById('dark-toggle');
-  const body = document.getElementById('body');
-
-  function applyDarkModeClasses(isDark) {
-    if (isDark) {
-      body.classList.add('bg-gray-900', 'text-white');
-      document.querySelectorAll('.bg-white').forEach(el => {
-        el.classList.remove('bg-white');
-        el.classList.add('bg-gray-800', 'text-white');
-      });
-    } else {
-      body.classList.remove('bg-gray-900', 'text-white');
-      document.querySelectorAll('.bg-gray-800').forEach(el => {
-        el.classList.remove('bg-gray-800', 'text-white');
-        el.classList.add('bg-white');
-      });
-    }
-  }
-
-  // Load dark mode setting
-  chrome.storage.local.get(['darkMode'], (res) => {
-    applyDarkModeClasses(res.darkMode);
-  });
-
-  // Toggle and save
-  darkToggleBtn.addEventListener('click', () => {
-    const isCurrentlyDark = body.classList.contains('bg-gray-900');
-    const newSetting = !isCurrentlyDark;
-    applyDarkModeClasses(newSetting);
-    chrome.storage.local.set({ darkMode: newSetting });
-  });
-</script>
-
 </body>
 </html>

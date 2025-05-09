@@ -56,53 +56,6 @@ if(patt.test(urlDomain)){
 }else{
     features["Prefix_Suffix"]=-1;
 }
-<<<<<<< HEAD
-// 12) Favicon from external domain
-let faviconMatch = document.querySelector("link[rel*='icon']");
-if (faviconMatch && faviconMatch.href) {
-  const favHost = new URL(faviconMatch.href).hostname.replace('www.', '');
-  features.External_Favicon = favHost !== bare ? 1 : -1;
-} else {
-  features.External_Favicon = -1;
-}
-
-// 13) Forms with GET instead of POST
-let usesGet = false;
-for (let i = 0; i < forms.length; i++) {
-  if ((forms[i].method || '').toUpperCase() === 'GET') {
-    usesGet = true;
-    break;
-  }
-}
-features.Forms_Using_GET = usesGet ? 1 : -1;
-
-// 14) OnMouseOver events (phishing trick)
-features.Uses_OnMouseOver = /onmouseover\s*=\s*/i.test(document.body.innerHTML) ? 1 : -1;
-
-// 15) Right-click disabled
-features.Right_Click_Disabled = /contextmenu\s*=\s*['"]?return false['"]?/.test(document.body.innerHTML) ? 1 : -1;
-
-// 16) IFrame present
-features.Uses_IFrame = document.getElementsByTagName('iframe').length > 0 ? 1 : -1;
-
-// 17) Domain Age – Placeholder (set to -1 until API fetch added)
-features.Domain_Age_Young = -1; // You can later implement a WHOIS lookup
-
-// 18) Empty title
-features.Empty_Title = document.title.trim() === "" ? 1 : -1;
-
-// 19) Excessive script tags
-features.Excess_Scripts = document.getElementsByTagName('script').length > 20 ? 1 : -1;
-
-// 20) Email address in body
-features.Email_In_Body = /[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/i.test(document.body.innerText) ? 1 : -1;
-
-// 21) Suspicious keywords
-features.Suspicious_Keywords = /(confirm|verify|login|bank|password|account)/i.test(document.body.innerText) ? 1 : -1;
-
-features.Submitting_to_email = mailRes;
-=======
->>>>>>> dadc630d63949eaf70f87832757f054097f38401
 
 // having_Sub_Domain:          
 
