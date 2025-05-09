@@ -4,68 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Phishing Detector</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
-    rel="stylesheet"
-  />
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
   <style>
     html, body {
       width: 600px;
       height: 500px;
+      background: #f9fafb;
       overflow-y: auto;
-      background: #f7f9fc;
-    }
-    .section {
-      background-color: white;
-      border-radius: 12px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      padding: 16px;
-      margin-bottom: 16px;
     }
     .hidden { display: none; }
   </style>
 </head>
-<body class="font-sans p-4">
-  <h1 class="text-3xl font-bold text-center text-gray-800 mb-4">Phishing Detector</h1>
+<body class="font-sans p-5 text-gray-800">
+  <h1 class="text-3xl font-bold text-center mb-5">Phishing Detector</h1>
 
-  <div class="flex justify-center space-x-4 mb-4">
+  <div class="flex justify-center space-x-4 mb-5">
     <button id="tab-scan" class="px-4 py-2 border-b-2 font-semibold text-blue-600 border-blue-500">Scan Result</button>
-    <button id="tab-history" class="px-4 py-2 border-b-2 font-semibold text-gray-600">Leaderboard</button>
+    <button id="tab-history" class="px-4 py-2 border-b-2 font-semibold text-gray-600 border-transparent">Leaderboard</button>
   </div>
 
+  <!-- Scan Result Tab -->
   <div id="tab-scan-content">
-    <div class="section">
-      <div class="text-lg mb-2 text-gray-700">
-        URL: <span id="domain" class="font-semibold"></span>
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <p class="text-sm text-gray-500">Domain:</p>
+      <p id="domain" class="text-lg font-semibold"></p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-sm text-gray-500">IPQS Risk Score</p>
+        <p id="score" class="text-3xl font-bold text-red-600">-</p>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-sm text-gray-500">Phishing Detected</p>
+        <p id="phishing" class="text-3xl font-bold">-</p>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-sm text-gray-500">Model Score</p>
+        <p id="Ml_score" class="text-3xl font-bold">-</p>
+      </div>
+      <div class="bg-white rounded-xl shadow p-4">
+        <p class="text-sm text-gray-500">Google Safe Browsing</p>
+        <p id="safety" class="text-3xl font-bold">-</p>
       </div>
     </div>
-    <div class="section">
-      <div class="text-xl text-gray-600">IPQS Risk Score</div>
-      <div class="text-4xl font-bold" id="score">-</div>
-    </div>
-    <div class="section">
-      <div class="text-xl text-gray-600">Phishing Detected</div>
-      <div class="text-4xl font-bold" id="phishing">-</div>
-    </div>
-    <div class="section">
-      <div class="text-xl text-gray-600">Model Score</div>
-      <div class="text-4xl font-bold" id="Ml_score">-</div>
-    </div>
-    <div class="section">
-      <div class="text-xl text-gray-600">Google Safe Browsing</div>
-      <div class="text-4xl font-bold" id="safety">-</div>
-    </div>
-    <div class="section">
-      <div id="status" class="text-lg text-gray-700"></div>
+
+    <div class="mt-4 bg-white rounded-xl shadow p-4">
+      <p id="status" class="text-center text-lg font-medium"></p>
     </div>
   </div>
 
+  <!-- History Tab -->
   <div id="tab-history-content" class="hidden">
-    <div class="section">
-      <h3 class="text-2xl font-semibold text-gray-700 mb-2 text-center">Phishing Leaderboard</h3>
-      <div id="history" class="space-y-2 max-h-48 overflow-y-auto pr-2"></div>
-      <div class="text-center mt-2">
-        <button id="clear-history" class="bg-red-500 text-white px-3 py-1 rounded">Clear History</button>
+    <div class="bg-white rounded-xl shadow p-4 mb-4">
+      <h2 class="text-xl font-semibold text-center mb-3">Phishing Leaderboard</h2>
+      <div id="history" class="space-y-2 max-h-52 overflow-y-auto pr-2 text-sm"></div>
+      <div class="text-center mt-4">
+        <button id="clear-history" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">Clear History</button>
       </div>
     </div>
   </div>
